@@ -5,22 +5,78 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Home</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* Header fijo arriba */
+    header {
+      background: #42a4f5ff;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 20px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 10;
+    }
+
+    /* Ajustar body para que el contenido no quede escondido detrás del header */
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      padding-top: 70px; /* espacio para el header */
+    }
+
+    /* Mensaje temporal */
+    .login-container {
+      margin: 20px auto;
+      text-align: center;
+      max-width: 400px;
+      background: #f4f4f4;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    /* Animación fade-out */
+    .fade-out {
+      opacity: 1;
+      transition: opacity 2s ease-out;
+    }
+    .fade-out.hide {
+      opacity: 0;
+    }
+  </style>
 </head>
 <body>
-  <div class="login-container">
-<h2>Bienvenido  <span id="nombreUsuario"></span></h2>
+  <header>
+    Bienvenido: <span id="nombreHeader"></span>
+  </header>
+
+  <!-- Mensaje temporal -->
+  <div class="login-container fade-out" id="bienvenida">
+    <h2>Bienvenido 🎉 <span id="nombreUsuario"></span></h2>
     <p>Has iniciado sesión correctamente.</p>
-    <a href="index.html">Cerrar sesión</a>
   </div>
+
   <script>
-  // Obtener el usuario del localStorage
-  const nombre = localStorage.getItem("usuario");
+    // Obtener usuario desde localStorage
+    const nombre = localStorage.getItem("usuario");
 
-  // Mostrarlo en el span si existe
-  if (nombre) {
-    document.getElementById("nombreUsuario").textContent = nombre;
-  }
-</script>
+    if (nombre) {
+      // Mostrar en el header fijo
+      document.getElementById("nombreHeader").textContent = nombre;
+      // Mostrar en el mensaje temporal
+      document.getElementById("nombreUsuario").textContent = nombre;
+      // Cambiar título de la pestaña
+      document.title = "Home - Bienvenido " + nombre;
+    }
 
+    // Desvanecer el mensaje temporal después de 3 segundos
+    const bienvenida = document.getElementById("bienvenida");
+    setTimeout(() => {
+      bienvenida.classList.add("hide");
+    }, 3000);
+  </script>
 </body>
 </html>
