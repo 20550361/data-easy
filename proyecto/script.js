@@ -6,14 +6,15 @@ document.getElementById("loginForm").addEventListener("submit", function(e) {
   const message = document.getElementById("message");
 
   // Usuario y contraseña de prueba
-  const userTest = "admin";
+  const userTest = "Admin";
   const passTest = "1234";
 
-  if (user === userTest && pass === passTest) {
-    message.style.color = "green";
-    message.textContent = "✅ Login exitoso, bienvenido " + user + "!";
+ if (user === userTest && pass === passTest) {
+  localStorage.setItem("usuario", user);
+
+  window.location.href = "home.html";
   } else {
     message.style.color = "red";
-    message.textContent = "❌ Usuario o contraseña incorrectos";
+    message.textContent = " Usuario o contraseña incorrectos";
   }
 });

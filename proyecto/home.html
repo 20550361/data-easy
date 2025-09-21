@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="login-container">
+<h2>Bienvenido  <span id="nombreUsuario"></span></h2>
+    <p>Has iniciado sesión correctamente.</p>
+    <a href="index.html">Cerrar sesión</a>
+  </div>
+  <script>
+  // Obtener el usuario del localStorage
+  const nombre = localStorage.getItem("usuario");
+
+  // Mostrarlo en el span si existe
+  if (nombre) {
+    document.getElementById("nombreUsuario").textContent = nombre;
+  }
+</script>
+
+</body>
+</html>
