@@ -4,79 +4,99 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Home</title>
-  <link rel="stylesheet" href="style.css">
   <style>
-    /* Header fijo arriba */
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      background: #f9f9f9;
+    }
+    /* Sidebar */
+    .sidebar {
+      height: 100vh;
+      width: 220px;
+      background: #0078d7;
+      color: white;
+      padding: 20px;
+      position: fixed;
+      left: 0;
+      top: 0;
+    }
+    .sidebar h2 { margin-top: 0; text-align: center; }
+    .sidebar a {
+      display: block;
+      color: white;
+      text-decoration: none;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 5px;
+    }
+    .sidebar a:hover { background: #005fa3; }
+    /* Contenido */
+    .content {
+      margin-left: 240px;
+      padding: 20px;
+      flex-grow: 1;
+    }
     header {
-      background: #42a4f5ff;
+      background: #0078d7;
       color: white;
       padding: 15px;
       text-align: center;
       font-size: 20px;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      z-index: 10;
-    }
-
-    /* Ajustar body para que el contenido no quede escondido detrás del header */
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      padding-top: 70px; /* espacio para el header */
-    }
-
-    /* Mensaje temporal */
-    .login-container {
-      margin: 20px auto;
-      text-align: center;
-      max-width: 400px;
-      background: #f4f4f4;
-      padding: 15px;
       border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     }
-
-    /* Animación fade-out */
+    /* Mensaje temporal */
     .fade-out {
       opacity: 1;
       transition: opacity 2s ease-out;
+      text-align: center;
+      margin: 20px auto;
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      max-width: 400px;
     }
-    .fade-out.hide {
-      opacity: 0;
-    }
+    .fade-out.hide { opacity: 0; }
   </style>
 </head>
 <body>
-  <header>
-    Bienvenido: <span id="nombreHeader"></span>
-  </header>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <h2>Menú</h2>
+    <a href="home.html">🏠 Inicio</a>
+    <a href="perfil.html">👤 Perfil de usuario</a>
+    <a href="#">⚙️ Configuración</a>
+    <a href="#" id="logout">🚪 Cerrar sesión</a>
+  </div>
 
-  <!-- Mensaje temporal -->
-  <div class="login-container fade-out" id="bienvenida">
-    <h2>Bienvenido 🎉 <span id="nombreUsuario"></span></h2>
-    <p>Has iniciado sesión correctamente.</p>
+  <!-- Contenido -->
+  <div class="content">
+    <header>
+      Bienvenido, <span id="nombreHeader"></span>
+    </header>
+    <div class="fade-out" id="bienvenida">
+      <h2>Bienvenido 🎉 <span id="nombreUsuario"></span></h2>
+      <p>Has iniciado sesión correctamente.</p>
+    </div>
   </div>
 
   <script>
-    // Obtener usuario desde localStorage
-    const nombre = localStorage.getItem("usuario");
+    const nombre = localStorage.getItem("usuario") || "admin";
+    document.getElementById("nombreHeader").textContent = nombre;
+    document.getElementById("nombreUsuario").textContent = nombre;
+    document.title = "Home - Bienvenido " + nombre;
 
-    if (nombre) {
-      // Mostrar en el header fijo
-      document.getElementById("nombreHeader").textContent = nombre;
-      // Mostrar en el mensaje temporal
-      document.getElementById("nombreUsuario").textContent = nombre;
-      // Cambiar título de la pestaña
-      document.title = "Home - Bienvenido " + nombre;
-    }
-
-    // Desvanecer el mensaje temporal después de 3 segundos
+    // Desvanecer bienvenida
     const bienvenida = document.getElementById("bienvenida");
-    setTimeout(() => {
-      bienvenida.classList.add("hide");
-    }, 3000);
+    setTimeout(() => bienvenida.classList.add("hide"), 3000);
+
+    // Cerrar sesión
+    document.getElementById("logout").addEventListener("click", () => {
+      localStorage.clear();
+      window.location.href = "index.html";
+    });
   </script>
 </body>
 </html>
