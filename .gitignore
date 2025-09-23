@@ -205,3 +205,30 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+# Archivos de Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Base de datos SQLite
+*.sqlite3
+db.sqlite3
+
+# Archivos de logs
+*.log
+
+# Archivos de compilación
+*.pot
+*.pyc
+
+# Entornos virtuales
+venv/
+env/
+
+# Archivos de IDE
+.vscode/
+.idea/
+
+# Archivos estáticos recolectados
+staticfiles/

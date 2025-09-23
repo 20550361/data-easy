@@ -1,0 +1,35 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuración - DataEasy</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+  <div class="sidebar">
+    <h2>Menú</h2>
+    <a href="{% url 'home' %}">🏠 Inicio</a>
+    <a href="{% url 'perfil' %}">👤 Perfil de usuario</a>
+    <a href="{% url 'configuracion' %}">⚙️ Configuración</a>
+    <a href="{% url 'logout' %}">🚪 Cerrar sesión</a>
+  </div>
+
+  <div class="content">
+    <header>
+      Configuración de {{ user.username }}
+    </header>
+    <main>
+      <h1>Preferencias</h1>
+      <p>Aquí podrás personalizar cómo funciona la aplicación.</p>
+
+      <ul>
+        <li><input type="checkbox"> Notificaciones por correo</li>
+        <li><input type="checkbox"> Tema oscuro</li>
+        <li><input type="checkbox"> Guardar sesión automáticamente</li>
+      </ul>
+    </main>
+  </div>
+</body>
+</html>
