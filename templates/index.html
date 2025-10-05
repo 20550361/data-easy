@@ -1,0 +1,43 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - DataEasy</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body class="login-page">
+
+  <div class="login-container">
+
+    <!-- Sección del logo -->
+    <div class="logo-section">
+      <img src="{% static 'img/logo.png' %}" alt="Logo DataEasy">
+    </div>
+
+    <!-- Sección del formulario -->
+    <div class="form-section">
+      <h2>Iniciar Sesión</h2>
+      <form method="POST">
+        {% csrf_token %}
+        <input type="text" name="username" placeholder="Usuario" required>
+        <input type="password" name="password" placeholder="Contraseña" required>
+        <button type="submit">Entrar</button>
+      </form>
+
+      <p style="text-align:center; margin-top:10px;">
+        <a href="{% url 'recuperacion' %}" style="color:#0078d7; text-decoration:none; font-weight:bold;">
+          ¿Olvidaste tu contraseña?
+        </a>
+      </p>
+
+      {% if error %}
+        <p class="error">{{ error }}</p>
+      {% endif %}
+    </div>
+
+  </div>
+
+</body>
+</html>

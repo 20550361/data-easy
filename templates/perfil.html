@@ -1,0 +1,45 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perfil - DataEasy</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+  <div class="sidebar">
+    <h2>Menú</h2>
+    <a href="{% url 'home' %}">🏠 Inicio</a>
+    <a href="{% url 'perfil' %}">👤 Perfil de usuario</a>
+    <a href="{% url 'configuracion' %}">⚙️ Configuración</a>
+    <a href="{% url 'logout' %}">🚪 Cerrar sesión</a>
+  </div>
+
+  <div class="content">
+    <header>
+      Perfil de {{ user.username }}
+    </header>
+    <main>
+      <h1>Información del usuario</h1>
+      <p>Aquí podrás editar y ver los datos de tu cuenta.</p>
+
+      <form>
+        <label>Nombre de usuario:</label>
+        <input type="text" value="{{ user.username }}" disabled>
+
+        <label>Email:</label>
+        <input type="email" placeholder="Ingresa tu correo">
+
+        <label>Número:</label>
+        <input type="text" placeholder="Ingresa tu número">
+
+        <label>Nueva contraseña:</label>
+        <input type="password" placeholder="********">
+
+        <button type="submit">Guardar cambios</button>
+      </form>
+    </main>
+  </div>
+</body>
+</html>
