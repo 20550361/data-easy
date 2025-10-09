@@ -1,4 +1,6 @@
-/* ===== Reset simple ===== */
+/* =========================================================
+   ESTILOS GLOBALES
+========================================================= */
 * {
   margin: 0;
   padding: 0;
@@ -6,13 +8,15 @@
   font-family: Arial, sans-serif;
 }
 
-/* ===== Fondo y colores generales ===== */
 body {
   background-color: #f4f4f9;
   color: #1e293b;
+  min-height: 100vh;
 }
 
-/* ===== Barra superior ===== */
+/* =========================================================
+   BARRA SUPERIOR
+========================================================= */
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -20,7 +24,11 @@ body {
   background-color: #1e293b;
   color: white;
   padding: 10px 20px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  height: 60px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
 .logo {
@@ -28,286 +36,12 @@ body {
   font-weight: bold;
 }
 
-/* ===== Ícono del usuario ===== */
-.user-icon-container {
-  position: relative;
-}
-
-.user-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 2px solid white;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-}
-
-.user-icon:hover {
-  transform: scale(1.1);
-}
-
-/* ===== Menú lateral ===== */
-.side-menu {
-  position: fixed;
-  top: 0;
-  right: -250px;
-  width: 250px;
-  height: 100%;
-  background-color: #ffffff;
-  box-shadow: -3px 0 5px rgba(0,0,0,0.3);
-  transition: right 0.3s ease;
-  padding: 20px;
-  z-index: 1000;
-}
-
-.side-menu.open {
-  right: 0;
-}
-
-.side-menu ul {
-  list-style: none;
-  padding: 0;
-  margin-top: 60px;
-}
-
-.side-menu ul li {
-  margin: 20px 0;
-}
-
-.side-menu ul li a {
-  color: #1e293b;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.side-menu ul li a:hover {
-  color: #0078d7;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 28px;
-  position: absolute;
-  top: 15px;
-  right: 20px;
-  cursor: pointer;
-  color: #1e293b;
-}
-
-/* ===== Contenido ===== */
-.content {
-  padding: 40px;
-}
-
-/* ===== FORMULARIO DE PERFIL ===== */
-.profile-form {
-  max-width: 500px;
-  margin-top: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.profile-form label {
-  font-weight: bold;
-  color: #1e293b;
-}
-
-.profile-form input {
-  padding: 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 14px;
-}
-
-.profile-form input:disabled {
-  background-color: #f1f5f9;
-  color: #475569;
-}
-
-.profile-form button {
-  background-color: #0078d7;
-  color: white;
-  border: none;
-  padding: 10px;
-  border-radius: 6px;
-  font-size: 15px;
-  cursor: pointer;
-  transition: background 0.3s;
-  margin-top: 10px;
-}
-
-.profile-form button:hover {
-  background-color: #005fa3;
-}
-
-/* ===== TARJETA DE PERFIL ===== */
-.profile-card {
-  background-color: #ffffff;
-  max-width: 450px;
-  margin: 60px auto;
-  padding: 30px 40px;
-  border-radius: 15px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  text-align: center;
-}
-
-.profile-avatar {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  border: 3px solid #0078d7;
-  object-fit: cover;
-  margin-bottom: 15px;
-}
-
-.profile-card h2 {
-  font-size: 22px;
-  color: #1e293b;
-  margin-bottom: 5px;
-}
-
-.profile-subtitle {
-  color: #64748b;
-  font-size: 14px;
-  margin-bottom: 20px;
-}
-
-.profile-info {
-  text-align: left;
-  margin: 0 auto 25px;
-  line-height: 1.8;
-}
-
-.profile-info p {
-  font-size: 15px;
-  color: #334155;
-  background-color: #f8fafc;
-  padding: 8px 10px;
-  border-radius: 8px;
-  margin-bottom: 10px;
-}
-
-/* ===== BOTÓN EDITAR ===== */
-.edit-btn {
-  background-color: #0078d7;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 10px 20px;
-  font-size: 15px;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.edit-btn:hover {
-  background-color: #005fa3;
-}
-
-/* Asegura que el ícono sea clickeable encima de todo */
-.topbar { position: sticky; top: 0; z-index: 100; }
-
-/* Card de perfil */
-.profile-card {
-  background-color: #ffffff;
-  max-width: 460px;
-  margin: 60px auto;
-  padding: 30px 40px;
-  border-radius: 15px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  text-align: center;
-}
-
-/* Pequeño feedback al guardar */
-.profile-card.pulse { box-shadow: 0 0 0 3px rgba(0,120,215,0.25); transition: box-shadow .4s; }
-
-.profile-avatar {
-  width: 100px; height: 100px; border-radius: 50%;
-  border: 3px solid #0078d7; object-fit: cover; margin-bottom: 15px;
-}
-
-.profile-subtitle { color: #64748b; font-size: 14px; margin-bottom: 18px; }
-
-.profile-info { text-align: left; margin: 0 auto 22px; line-height: 1.8; }
-.profile-info p {
-  font-size: 15px; color: #334155; background: #f8fafc;
-  padding: 8px 10px; border-radius: 8px; margin-bottom: 10px;
-}
-
-/* Área de edición */
-.hidden { display: none !important; }
-
-.profile-edit {
-  display: flex; flex-direction: column; gap: 10px; text-align: left; margin: 0 auto 14px;
-}
-.profile-edit label { font-weight: 600; color: #1e293b; }
-.profile-edit input {
-  padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px;
-}
-.actions { display: flex; gap: 10px; justify-content: flex-end; }
-
-.edit-btn, .save-btn, .cancel-btn {
-  border: none; border-radius: 8px; padding: 10px 16px; font-size: 14px; cursor: pointer; transition: background .25s;
-}
-.edit-btn   { background: #0078d7; color: #fff; }
-.edit-btn:hover { background: #005fa3; }
-
-.save-btn   { background: #16a34a; color: #fff; }
-.save-btn:hover { background: #15803d; }
-
-.cancel-btn { background: #e2e8f0; color: #111827; }
-.cancel-btn:hover { background: #cbd5e1; }
-
-.note { color: #64748b; font-size: 12px; margin-top: 8px; }
-
-/* Ícono usuario arriba-derecha */
-.user-icon-container { position: relative; z-index: 101; }
-.user-icon {
-  width: 35px; height: 35px; border-radius: 50%; border: 2px solid #fff;
-  cursor: pointer; transition: transform .2s;
-}
-.user-icon:hover { transform: scale(1.06); }
-
-/* ===== MENÚ DESPLEGABLE USUARIO ===== */
+/* Ícono usuario arriba derecha */
 .user-menu-wrapper {
   position: relative;
   display: inline-block;
 }
 
-.dropdown-menu {
-  position: absolute;
-  top: 45px;
-  right: 0;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-  display: none;
-  flex-direction: column;
-  min-width: 170px;
-  overflow: hidden;
-  z-index: 200;
-}
-
-.dropdown-menu a {
-  display: block;
-  padding: 10px 15px;
-  color: #1e293b;
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 14px;
-  transition: background 0.2s;
-}
-
-.dropdown-menu a:hover {
-  background-color: #f1f5f9;
-}
-
-.dropdown-menu.show {
-  display: flex;
-}
-
-/* Ícono de usuario */
 .user-icon {
   width: 35px;
   height: 35px;
@@ -321,35 +55,188 @@ body {
   transform: scale(1.05);
 }
 
-/* ===== UBICAR TARJETA DE PERFIL A LA IZQUIERDA ===== */
-.content {
+/* Menú desplegable pequeño */
+.dropdown-menu {
+  position: absolute;
+  top: 45px;
+  right: 0;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  display: none;
+  flex-direction: column;
+  min-width: 170px;
+  overflow: hidden;
+  z-index: 200;
+}
+
+.dropdown-menu.show {
   display: flex;
-  justify-content: flex-start; /* Alinea todo a la izquierda */
-  align-items: flex-start;
-  padding: 40px 60px;
 }
 
-/* La tarjeta se queda con el mismo tamaño, solo ajustamos margen */
-.profile-card {
-  margin: 40px 0;
-  margin-left: 0;
-  text-align: left;
-  align-items: flex-start;
-}
-
-/* Ajustes visuales para que se vea bien en modo izquierda */
-.profile-card h2, 
-.profile-card .profile-subtitle {
-  text-align: left;
-  margin-left: 10px;
-}
-
-.profile-card .profile-avatar {
+.dropdown-menu a {
   display: block;
-  margin: 0 0 15px 10px; /* separa el avatar del borde */
+  padding: 10px 15px;
+  color: #1e293b;
+  text-decoration: none;
+  font-size: 14px;
+  transition: background 0.2s ease;
 }
 
-.profile-info, 
-.profile-edit {
+.dropdown-menu a:hover {
+  background-color: #f1f5f9;
+}
+
+/* =========================================================
+   ESTRUCTURA PRINCIPAL
+========================================================= */
+.main-container {
+  display: flex;
+  min-height: calc(100vh - 60px);
+}
+
+/* =========================================================
+   SIDEBAR IZQUIERDO
+========================================================= */
+.sidebar {
+  width: 240px;
+  background-color: #1e293b;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 25px 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.profile-section {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.profile-pic {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: white;
+  object-fit: cover;
+  border: 3px solid #0078d7;
+}
+
+.profile-section h3 {
+  margin-top: 10px;
+  font-size: 16px;
+  color: #f8fafc;
+}
+
+/* Botones del menú lateral */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   width: 100%;
+  align-items: center;
+}
+
+.sidebar-btn {
+  width: 80%;
+  text-align: center;
+  padding: 10px 0;
+  background-color: #334155;
+  border-radius: 6px;
+  text-decoration: none;
+  color: white;
+  font-weight: 500;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.sidebar-btn:hover {
+  background-color: #475569;
+  transform: scale(1.03);
+}
+
+/* =========================================================
+   CONTENIDO PRINCIPAL
+========================================================= */
+.content {
+  flex: 1;
+  background-color: #f4f4f9;
+  padding: 40px;
+}
+
+/* Banner de bienvenida */
+.welcome-banner {
+  background-color: #ffffff;
+  padding: 20px 25px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  margin-bottom: 30px;
+}
+
+.welcome-banner h2 {
+  font-size: 22px;
+  color: #1e293b;
+  margin-bottom: 5px;
+}
+
+.welcome-banner p {
+  color: #475569;
+  font-size: 15px;
+}
+
+/* Paneles del dashboard */
+.dashboard-panels {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.dashboard-panels > div {
+  flex: 1;
+  min-width: 300px;
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-panels h3 {
+  font-size: 18px;
+  margin-bottom: 10px;
+  color: #1e293b;
+}
+
+/* =========================================================
+   RESPONSIVE DESIGN
+========================================================= */
+@media (max-width: 1024px) {
+  .main-container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    flex-direction: row;
+    justify-content: space-around;
+    height: auto;
+    width: 100%;
+    padding: 15px;
+    position: relative;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .sidebar-btn {
+    width: auto;
+    padding: 8px 15px;
+  }
+
+  .content {
+    padding: 20px;
+  }
 }

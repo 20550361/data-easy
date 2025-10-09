@@ -1,5 +1,5 @@
 /* =========================================================
-   RESETEO GLOBAL
+   RESET Y CONFIGURACIÓN GLOBAL
 ========================================================= */
 * {
   margin: 0;
@@ -8,17 +8,14 @@
   font-family: Arial, sans-serif;
 }
 
-/* =========================================================
-   ESTILO GENERAL DEL BODY
-========================================================= */
 body {
   min-height: 100vh;
   background-color: #f4f4f9;
-  color: #333;
+  color: #1e293b;
 }
 
 /* =========================================================
-   ======= LOGIN PAGE =======
+   LOGIN PAGE
 ========================================================= */
 body.login-page {
   display: flex;
@@ -26,7 +23,6 @@ body.login-page {
   align-items: center;
 }
 
-/* Contenedor principal (logo + formulario) */
 .login-container {
   display: flex;
   flex-direction: row;
@@ -39,7 +35,6 @@ body.login-page {
   overflow: hidden;
 }
 
-/* Lado del logo */
 .logo-section {
   width: 45%;
   background-color: #1e293b;
@@ -54,7 +49,6 @@ body.login-page {
   height: auto;
 }
 
-/* Lado del formulario */
 .form-section {
   width: 55%;
   padding: 40px 50px;
@@ -101,30 +95,31 @@ body.login-page {
 }
 
 /* =========================================================
-   ======= HOME PAGE =======
+   BARRA SUPERIOR
 ========================================================= */
-
-/* ===== Barra superior ===== */
 .topbar {
-  background-color: #1e293b;
-  color: white;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 25px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-  position: relative;
-  z-index: 10;
+  background-color: #1e293b;
+  color: white;
+  padding: 10px 20px;
+  height: 60px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
-.topbar h1 {
-  font-size: 22px;
+.logo {
+  font-size: 20px;
   font-weight: bold;
 }
 
-/* ===== Ícono de usuario (arriba a la derecha) ===== */
-.user-icon-container {
+/* Menú usuario superior */
+.user-menu-wrapper {
   position: relative;
+  display: inline-block;
 }
 
 .user-icon {
@@ -137,179 +132,244 @@ body.login-page {
 }
 
 .user-icon:hover {
-  transform: scale(1.1);
+  transform: scale(1.05);
 }
 
-/* ===== Menú lateral derecho ===== */
-.side-menu {
-  position: fixed;
-  top: 0;
-  right: -250px;
-  width: 250px;
-  height: 100%;
-  background-color: #ffffff;
-  box-shadow: -3px 0 5px rgba(0, 0, 0, 0.3);
-  transition: right 0.3s ease;
-  padding: 20px;
-  z-index: 1000;
-}
-
-.side-menu.open {
-  right: 0;
-}
-
-.side-menu ul {
-  list-style: none;
-  padding: 0;
-  margin-top: 60px;
-}
-
-.side-menu ul li {
-  margin: 20px 0;
-}
-
-.side-menu ul li a {
-  display: block;
-  text-decoration: none;
-  color: #1e293b;
-  font-weight: 600;
-  font-size: 16px;
-  transition: color 0.2s ease;
-}
-
-.side-menu ul li a:hover {
-  color: #0078d7;
-}
-
-/* Botón de cerrar menú */
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 28px;
-  color: #333;
-  cursor: pointer;
+.dropdown-menu {
   position: absolute;
-  top: 15px;
-  right: 20px;
+  top: 45px;
+  right: 0;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  display: none;
+  flex-direction: column;
+  min-width: 170px;
+  overflow: hidden;
+  z-index: 200;
 }
 
-/* ===== Contenido principal ===== */
-.content {
-  padding: 40px;
+.dropdown-menu.show {
+  display: flex;
 }
 
-.content h2 {
+.dropdown-menu a {
+  display: block;
+  padding: 10px 15px;
   color: #1e293b;
-  font-size: 24px;
-  margin-bottom: 10px;
+  text-decoration: none;
+  font-size: 14px;
+  transition: background 0.2s ease;
 }
 
-.content p {
-  color: #555;
-  font-size: 16px;
+.dropdown-menu a:hover {
+  background-color: #f1f5f9;
 }
 
 /* =========================================================
-   ======= PANELES / DASHBOARD OPCIONAL =======
+   LAYOUT PRINCIPAL Y SIDEBAR
 ========================================================= */
-.container {
+.main-container {
   display: flex;
-  height: calc(100vh - 60px);
+  min-height: calc(100vh - 60px);
 }
 
 .sidebar {
   width: 240px;
-  background-color: #ffffff;
-  border-right: 1px solid #e2e8f0;
-  padding: 20px;
+  background-color: #1e293b;
+  color: white;
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 25px 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
 }
 
-.profile-box {
+.profile-section {
   text-align: center;
   margin-bottom: 30px;
 }
 
-.profile-icon {
-  font-size: 60px;
-  background-color: #1e293b;
-  color: white;
-  width: 80px;
-  height: 80px;
+.profile-pic {
+  width: 90px;
+  height: 90px;
   border-radius: 50%;
+  background: white;
+  object-fit: cover;
+  border: 3px solid #0078d7;
+}
+
+.profile-section h3 {
+  margin-top: 10px;
+  font-size: 16px;
+  color: #f8fafc;
+}
+
+.sidebar-nav {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
   align-items: center;
-  margin: 0 auto 10px;
 }
 
-.profile-box h3 {
-  margin-bottom: 10px;
-  color: #333;
-}
-
-.btn {
-  display: inline-block;
-  background-color: #0078d7;
-  color: white;
-  padding: 8px 15px;
-  border-radius: 5px;
-  text-decoration: none;
-  font-size: 14px;
-  transition: background 0.3s;
-}
-
-.btn:hover {
-  background-color: #005fa3;
-}
-
-/* Navegación lateral interna */
-.side-menu a {
-  display: block;
-  padding: 12px;
-  color: #1e293b;
-  text-decoration: none;
-  border-radius: 5px;
-  margin-bottom: 10px;
-  transition: background 0.3s;
+.sidebar-btn {
+  width: 80%;
   text-align: center;
+  padding: 10px 0;
+  background-color: #334155;
+  border-radius: 6px;
+  text-decoration: none;
+  color: white;
+  font-weight: 500;
+  transition: background 0.2s ease, transform 0.1s ease;
 }
 
-.side-menu a:hover {
-  background-color: #e2e8f0;
+.sidebar-btn:hover {
+  background-color: #475569;
+  transform: scale(1.03);
 }
 
 /* =========================================================
-   ======= RESPONSIVE DESIGN =======
+   CONTENIDO GENERAL
 ========================================================= */
-@media (max-width: 768px) {
-  .container {
+.content {
+  flex: 1;
+  background-color: #f4f4f9;
+  padding: 40px;
+}
+
+/* =========================================================
+   PERFIL DE USUARIO
+========================================================= */
+.user-info-card {
+  background-color: #ffffff;
+  padding: 40px 50px;
+  border-radius: 12px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.user-info-card h2 {
+  text-align: center;
+  color: #1e293b;
+  margin-bottom: 30px;
+  font-size: 22px;
+  border-bottom: 2px solid #cbd5e1;
+  padding-bottom: 10px;
+}
+
+/* Campos */
+.user-info-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: bold;
+  color: #1e293b;
+  margin-bottom: 5px;
+}
+
+.form-group input {
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: #f9fafb;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus {
+  border-color: #0078d7;
+  outline: none;
+}
+
+.form-group input:disabled {
+  background-color: #e2e8f0;
+  color: #475569;
+}
+
+/* Botones */
+.button-group {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.edit-btn,
+.save-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  color: white;
+}
+
+.edit-btn {
+  background-color: #0078d7;
+}
+.edit-btn:hover {
+  background-color: #005fa3;
+}
+
+.save-btn {
+  background-color: #16a34a;
+}
+.save-btn:hover {
+  background-color: #15803d;
+}
+
+/* Ocultar/mostrar */
+.hidden {
+  display: none !important;
+}
+
+/* =========================================================
+   RESPONSIVE DESIGN
+========================================================= */
+@media (max-width: 1024px) {
+  .main-container {
     flex-direction: column;
   }
 
   .sidebar {
-    width: 100%;
     flex-direction: row;
     justify-content: space-around;
+    height: auto;
+    width: 100%;
+    padding: 15px;
+    position: relative;
   }
 
-  .side-menu a {
-    margin: 0;
-    padding: 10px;
+  .sidebar-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .sidebar-btn {
+    width: auto;
+    padding: 8px 15px;
   }
 
   .content {
     padding: 20px;
   }
 
-  .topbar h1 {
-    font-size: 18px;
-  }
-
-  .user-icon {
-    width: 30px;
-    height: 30px;
+  .user-info-card {
+    padding: 25px;
   }
 }

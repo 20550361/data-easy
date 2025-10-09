@@ -1,0 +1,13 @@
+    <aside class="sidebar">
+      <div class="profile-section">
+        <img src="{% static 'img/user.png' %}" alt="Perfil" class="profile-pic">
+        <h3>{{ user.username }}</h3>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="{% url 'perfil' %}" class="sidebar-btn">🧾 Mi ficha</a>
+        <a href="{% url 'inventario' %}" class="sidebar-btn">📦 Inventario</a>
+        <a href="{% url 'estadisticas' %}" class="sidebar-btn">📊 Estadísticas</a>
+        <a href="{% url 'gestion_usuarios' %}" class="sidebar-btn">👥 Gestión de usuarios</a>
+      </nav>
+    </aside>

@@ -21,38 +21,47 @@
     </div>
   </header>
 
-  <!-- ===== CONTENIDO PRINCIPAL (Perfil) ===== -->
-  <main class="content">
-    <div class="profile-card" id="profileCard">
-      <img src="{% static 'img/user.png' %}" alt="Foto de usuario" class="profile-avatar">
-      <h2 id="displayUsername">{{ user.username }}</h2>
-      <p class="profile-subtitle">Usuario de DataEasy</p>
+  <!-- ===== CONTENEDOR PRINCIPAL ===== -->
+  <div class="main-container">
 
-      <div class="profile-info" id="displayInfo">
-        <p><strong>Correo:</strong> <span id="displayEmail">{{ user.email|default:"No registrado" }}</span></p>
-        <p><strong>Número:</strong> <span id="displayPhone">+56 9 0000 0000</span></p>
+    <!-- ===== PANEL IZQUIERDO ===== -->
+    <aside class="sidebar">
+      <div class="profile-section">
+        <img src="{% static 'img/user.png' %}" alt="Perfil" class="profile-pic">
+        <h3>{{ user.username }}</h3>
       </div>
 
-      <div class="profile-edit hidden" id="editInfo">
-        <label for="emailInput">Correo</label>
-        <input type="email" id="emailInput" placeholder="Ingresa tu correo">
+      <nav class="sidebar-nav">
+        <a href="{% url 'perfil' %}" class="sidebar-btn">🧾 Mi ficha</a>
+        <a href="{% url 'inventario' %}" class="sidebar-btn">📦 Inventario</a>
+        <a href="{% url 'estadisticas' %}" class="sidebar-btn">📊 Estadísticas</a>
+        <a href="{% url 'gestion_usuarios' %}" class="sidebar-btn">👥 Gestión de usuarios</a>
+      </nav>
+    </aside>
 
-        <label for="phoneInput">Número</label>
-        <input type="text" id="phoneInput" placeholder="+56 9 0000 0000">
+    <!-- ===== CONTENIDO PRINCIPAL ===== -->
+    <main class="content">
+      <section class="welcome-banner">
+        <h2>Bienvenido, {{ user.username }}</h2>
+        <p>Este es tu panel principal en DataEasy 🚀</p>
+      </section>
 
-        <div class="actions">
-          <button class="save-btn" id="saveBtn" type="button">Guardar</button>
-          <button class="cancel-btn" id="cancelBtn" type="button">Cancelar</button>
+      <section class="dashboard-panels">
+        <div class="recent-items">
+          <h3>Vistos recientemente</h3>
+          <p>(Aquí se mostrarán los últimos objetos revisados...)</p>
         </div>
-      </div>
 
-      <button class="edit-btn" id="editToggleBtn" type="button">✏️ Editar información</button>
-      <p class="note">* Cambios guardados localmente en este navegador.</p>
-    </div>
-  </main>
+        <div class="low-stock">
+          <h3>Bajo stock</h3>
+          <p>(Aquí aparecerán los artículos con stock bajo...)</p>
+        </div>
+      </section>
+    </main>
+  </div>
 
+  <!-- ===== SCRIPT DEL MENÚ SUPERIOR ===== -->
   <script>
-    // === MENÚ DESPLEGABLE ===
     const userIcon = document.getElementById('userIcon');
     const dropdownMenu = document.getElementById('dropdownMenu');
     document.addEventListener('click', (e) => {
@@ -62,59 +71,7 @@
         dropdownMenu.classList.remove('show');
       }
     });
-
-    // === LÓGICA DE EDICIÓN LOCAL ===
-    const username = "{{ user.username|escapejs }}";
-    const keyEmail = `profile_email_${username}`;
-    const keyPhone = `profile_phone_${username}`;
-    const displayEmail = document.getElementById('displayEmail');
-    const displayPhone = document.getElementById('displayPhone');
-    const displayInfo  = document.getElementById('displayInfo');
-    const editInfo     = document.getElementById('editInfo');
-    const emailInput   = document.getElementById('emailInput');
-    const phoneInput   = document.getElementById('phoneInput');
-    const editToggleBtn = document.getElementById('editToggleBtn');
-    const saveBtn       = document.getElementById('saveBtn');
-    const cancelBtn     = document.getElementById('cancelBtn');
-
-    function loadLocal() {
-      const savedEmail = localStorage.getItem(keyEmail);
-      const savedPhone = localStorage.getItem(keyPhone);
-      if (savedEmail) displayEmail.textContent = savedEmail;
-      if (savedPhone) displayPhone.textContent = savedPhone;
-    }
-
-    function enterEdit() {
-      emailInput.value = displayEmail.textContent.trim();
-      phoneInput.value = displayPhone.textContent.trim();
-      displayInfo.classList.add('hidden');
-      editInfo.classList.remove('hidden');
-      editToggleBtn.classList.add('hidden');
-    }
-
-    function exitEdit() {
-      editInfo.classList.add('hidden');
-      displayInfo.classList.remove('hidden');
-      editToggleBtn.classList.remove('hidden');
-    }
-
-    function saveChanges() {
-      const newEmail = (emailInput.value || '').trim();
-      const newPhone = (phoneInput.value || '').trim();
-      localStorage.setItem(keyEmail, newEmail || '');
-      localStorage.setItem(keyPhone, newPhone || '');
-      displayEmail.textContent = newEmail || 'No registrado';
-      displayPhone.textContent = newPhone || '+56 9 0000 0000';
-      exitEdit();
-      const card = document.getElementById('profileCard');
-      card.classList.add('pulse');
-      setTimeout(()=> card.classList.remove('pulse'), 400);
-    }
-
-    document.addEventListener('DOMContentLoaded', loadLocal);
-    editToggleBtn.addEventListener('click', enterEdit);
-    saveBtn.addEventListener('click', saveChanges);
-    cancelBtn.addEventListener('click', exitEdit);
   </script>
+
 </body>
 </html>

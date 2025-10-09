@@ -32,3 +32,15 @@ def configuracion(request):
 
 def recuperacion(request):
     return render(request, 'recuperacion.html')
+
+def inventario(request):
+    return render(request, 'inventario.html')
+
+def estadisticas(request):
+    return render(request, 'estadisticas.html')
+
+def gestion_usuarios(request):
+    return render(request, 'gestion_usuarios.html')
+
+def recuperacion(request):
+    return render(request, 'recuperacion.html')
