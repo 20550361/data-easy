@@ -31,12 +31,20 @@ body {
   z-index: 1000;
 }
 
-.logo {
+/* Logo clickeable hacia Home */
+.brand, .logo-link {
+  text-decoration: none;
+  color: white;
   font-size: 20px;
-  font-weight: bold;
+  font-weight: 700;
 }
 
-/* Ícono usuario arriba derecha */
+.brand:hover, .logo-link:hover .logo {
+  opacity: 0.85;
+  transition: opacity 0.2s ease;
+}
+
+/* Icono de usuario */
 .user-menu-wrapper {
   position: relative;
   display: inline-block;
@@ -55,7 +63,7 @@ body {
   transform: scale(1.05);
 }
 
-/* Menú desplegable pequeño */
+/* Menú desplegable */
 .dropdown-menu {
   position: absolute;
   top: 45px;
@@ -88,7 +96,7 @@ body {
 }
 
 /* =========================================================
-   ESTRUCTURA PRINCIPAL
+   LAYOUT PRINCIPAL
 ========================================================= */
 .main-container {
   display: flex;
@@ -158,7 +166,7 @@ body {
 }
 
 /* =========================================================
-   CONTENIDO PRINCIPAL
+   CONTENIDO DEL HOME
 ========================================================= */
 .content {
   flex: 1;
@@ -209,7 +217,7 @@ body {
 }
 
 /* =========================================================
-   RESPONSIVE DESIGN
+   RESPONSIVE
 ========================================================= */
 @media (max-width: 1024px) {
   .main-container {

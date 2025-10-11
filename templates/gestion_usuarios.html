@@ -1,3 +1,31 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nombre de la Página - DataEasy</title>
+
+  <!-- CSS general -->
+  <link rel="stylesheet" href="{% static 'css/home-style.css' %}">
+</head>
+<body>
+
+  <!-- ===== BARRA SUPERIOR ===== -->
+  <header class="topbar">
+    <a href="{% url 'home' %}" class="brand" title="Volver al inicio">DataEasy</a>
+    <div class="user-menu-wrapper">
+      <img src="{% static 'img/user.png' %}" alt="Usuario" class="user-icon" id="userIcon">
+      <div class="dropdown-menu" id="dropdownMenu">
+        <a href="{% url 'logout' %}">🔒 Cerrar sesión</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== CONTENEDOR PRINCIPAL ===== -->
+  <div class="main-container">
+
+    <!-- ===== SIDEBAR ===== -->
     <aside class="sidebar">
       <div class="profile-section">
         <img src="{% static 'img/user.png' %}" alt="Perfil" class="profile-pic">
@@ -11,3 +39,29 @@
         <a href="{% url 'gestion_usuarios' %}" class="sidebar-btn">👥 Gestión de usuarios</a>
       </nav>
     </aside>
+
+    <!-- ===== CONTENIDO ===== -->
+    <main class="content">
+      <section class="page-content">
+        <h2>Título de la página</h2>
+        <p>Aquí va el contenido principal de esta sección.</p>
+      </section>
+    </main>
+  </div>
+
+  <!-- ===== SCRIPT ===== -->
+  <script>
+    // === Menú desplegable del usuario ===
+    const userIcon = document.getElementById('userIcon');
+    const dropdownMenu = document.getElementById('dropdownMenu');
+    document.addEventListener('click', (e) => {
+      if (userIcon.contains(e.target)) {
+        dropdownMenu.classList.toggle('show');
+      } else if (!dropdownMenu.contains(e.target)) {
+        dropdownMenu.classList.remove('show');
+      }
+    });
+  </script>
+
+</body>
+</html>

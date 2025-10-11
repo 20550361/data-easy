@@ -5,21 +5,27 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Perfil - DataEasy</title>
+
+  <!-- CSS home (topbar, sidebar, etc.) -->
   <link rel="stylesheet" href="{% static 'css/home-style.css' %}">
+
+  <!-- CSS perfil -->
+  <link rel="stylesheet" href="{% static 'css/perfil.css' %}">
 </head>
+
 <body>
 
   <!-- ===== BARRA SUPERIOR ===== -->
   <header class="topbar">
-    <h1 class="logo">DataEasy</h1>
+    <a href="{% url 'home' %}" class="brand" title="Volver al inicio">DataEasy</a>
     <div class="user-menu-wrapper">
       <img src="{% static 'img/user.png' %}" alt="Usuario" class="user-icon" id="userIcon">
       <div class="dropdown-menu" id="dropdownMenu">
-        <a href="{% url 'configuracion' %}">⚙️ Configuración</a>
         <a href="{% url 'logout' %}">🔒 Cerrar sesión</a>
       </div>
     </div>
   </header>
+
 
   <!-- ===== CONTENEDOR PRINCIPAL ===== -->
   <div class="main-container">

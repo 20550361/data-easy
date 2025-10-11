@@ -20,12 +20,10 @@ def index(request):
 def home(request):
     return render(request, 'home.html')
 
-# Vista Perfil
 @login_required
 def perfil(request):
     return render(request, 'perfil.html')
 
-# Vista Configuración
 @login_required
 def configuracion(request):
     return render(request, 'configuracion.html')

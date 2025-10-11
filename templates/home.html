@@ -11,18 +11,21 @@
 
   <!-- ===== BARRA SUPERIOR ===== -->
   <header class="topbar">
+  <a href="{% url 'home' %}" class="logo-link">
     <h1 class="logo">DataEasy</h1>
-    <div class="user-menu-wrapper">
+  </a>
+  <div class="user-menu-wrapper">
       <img src="{% static 'img/user.png' %}" alt="Usuario" class="user-icon" id="userIcon">
       <div class="dropdown-menu" id="dropdownMenu">
-        <a href="{% url 'configuracion' %}">⚙️ Configuración</a>
         <a href="{% url 'logout' %}">🔒 Cerrar sesión</a>
       </div>
     </div>
   </header>
 
-  <!-- ===== CONTENEDOR PRINCIPAL ===== -->
+  
   <div class="main-container">
+
+
 
     <!-- ===== PANEL IZQUIERDO ===== -->
     <aside class="sidebar">
@@ -39,11 +42,13 @@
       </nav>
     </aside>
 
-    <!-- ===== CONTENIDO PRINCIPAL ===== -->
+
+
+    <!-- ===== panel de beinvenida ===== -->
     <main class="content">
       <section class="welcome-banner">
         <h2>Bienvenido, {{ user.username }}</h2>
-        <p>Este es tu panel principal en DataEasy 🚀</p>
+        <p>Este es tu panel principal en DataEasy </p>
       </section>
 
       <section class="dashboard-panels">
