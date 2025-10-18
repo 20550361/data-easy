@@ -17,7 +17,6 @@
     <div class="user-menu-wrapper">
       <img src="{% static 'img/user.png' %}" alt="Usuario" class="user-icon" id="userIcon">
       <div class="dropdown-menu" id="dropdownMenu">
-        <a href="{% url 'configuracion' %}">⚙️ Configuración</a>
         <a href="{% url 'logout' %}">🔒 Cerrar sesión</a>
       </div>
     </div>
@@ -38,6 +37,7 @@
         <a href="{% url 'inventario' %}" class="sidebar-btn">📦 Inventario</a>
         <a href="{% url 'estadisticas' %}" class="sidebar-btn">📊 Estadísticas</a>
         <a href="{% url 'gestion_usuarios' %}" class="sidebar-btn">👥 Gestión de usuarios</a>
+        <a href="{% url 'carga_datos' %}" class="sidebar-btn active">📁 Carga de datos</a>     
       </nav>
     </aside>
 

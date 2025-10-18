@@ -42,3 +42,10 @@ def gestion_usuarios(request):
 
 def recuperacion(request):
     return render(request, 'recuperacion.html')
+
+def carga_datos(request):
+    if request.method == 'POST' and request.FILES.get('archivo_excel'):
+        archivo = request.FILES['archivo_excel']
+        # Por ahora solo mostramos el nombre, luego podemos procesarlo con pandas
+        return HttpResponse(f"Archivo recibido correctamente: {archivo.name}")
+    return render(request, 'carga_datos.html')
