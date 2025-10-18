@@ -1,83 +1,51 @@
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Home - DataEasy</title>
-  <link rel="stylesheet" href="{% static 'css/home-style.css' %}">
-</head>
-<body>
 
-  <!-- ===== BARRA SUPERIOR ===== -->
-  <header class="topbar">
-  <a href="{% url 'home' %}" class="logo-link">
-    <h1 class="logo">DataEasy</h1>
-  </a>
-  <div class="user-menu-wrapper">
-      <img src="{% static 'img/user.png' %}" alt="Usuario" class="user-icon" id="userIcon">
-      <div class="dropdown-menu" id="dropdownMenu">
-        <a href="{% url 'logout' %}">🔒 Cerrar sesión</a>
-      </div>
-    </div>
-  </header>
+{% block title %}Home - DataEasy{% endblock %}
 
-  
-  <div class="main-container">
+{% block styles %}
+    <link rel="stylesheet" href="{% static 'css/home-style.css' %}">
+{% endblock %}
 
 
-
-    <!-- ===== PANEL IZQUIERDO ===== -->
-    <aside class="sidebar">
-      <div class="profile-section">
-        <img src="{% static 'img/user.png' %}" alt="Perfil" class="profile-pic">
-        <h3>{{ user.username }}</h3>
-      </div>
-
-      <nav class="sidebar-nav">
-        <a href="{% url 'perfil' %}" class="sidebar-btn">🧾 Mi ficha</a>
-        <a href="{% url 'inventario' %}" class="sidebar-btn">📦 Inventario</a>
-        <a href="{% url 'estadisticas' %}" class="sidebar-btn">📊 Estadísticas</a>
-        <a href="{% url 'gestion_usuarios' %}" class="sidebar-btn">👥 Gestión de usuarios</a>
-        <a href="{% url 'carga_datos' %}" class="sidebar-btn active">📁 Carga de datos</a>
-      </nav>
-    </aside>
-
-
-
-    <!-- ===== panel de beinvenida ===== -->
-    <main class="content">
-      <section class="welcome-banner">
+{% block content %}
+    <section class="welcome-banner">
         <h2>Bienvenido, {{ user.username }}</h2>
-        <p>Este es tu panel principal en DataEasy </p>
-      </section>
+        <p>Este es tu panel principal en DataEasy</p>
+    </section>
 
-      <section class="dashboard-panels">
+    <section class="dashboard-panels">
         <div class="recent-items">
-          <h3>Vistos recientemente</h3>
-          <p>(Aquí se mostrarán los últimos objetos revisados...)</p>
+            <h3>Últimos movimientos</h3>
+            <ul>
+                {% for mov in movimientos_recientes %}
+                    <li>
+                        <strong>{{ mov.tipo_movimiento|capfirst }}</strong>: 
+                        {{ mov.cantidad }} x {{ mov.producto.nombre_producto }}
+                        <span class="fecha">{{ mov.fecha_movimiento|date:"d M Y" }}</span>
+                    </li>
+                {% empty %}
+                    <p>No hay movimientos recientes.</p>
+                {% endfor %}
+            </ul>
         </div>
 
         <div class="low-stock">
-          <h3>Bajo stock</h3>
-          <p>(Aquí aparecerán los artículos con stock bajo...)</p>
+            <h3>⚠️ Artículos con bajo stock</h3>
+            <ul>
+                {% for prod in productos_bajo_stock %}
+                    <li>
+                        <a href="{% url 'inventario_editar' prod.id %}"> 
+                            {{ prod.nombre_producto }}
+                            <span class="stock-level">
+                                Quedan: {{ prod.stock_actual }} (Min: {{ prod.stock_minimo }})
+                            </span>
+                        </a>
+                    </li>
+                {% empty %}
+                    <p>No hay productos en alerta.</p>
+                {% endfor %}
+            </ul>
         </div>
-      </section>
-    </main>
-  </div>
-
-  <!-- ===== SCRIPT DEL MENÚ SUPERIOR ===== -->
-  <script>
-    const userIcon = document.getElementById('userIcon');
-    const dropdownMenu = document.getElementById('dropdownMenu');
-    document.addEventListener('click', (e) => {
-      if (userIcon.contains(e.target)) {
-        dropdownMenu.classList.toggle('show');
-      } else if (!dropdownMenu.contains(e.target)) {
-        dropdownMenu.classList.remove('show');
-      }
-    });
-  </script>
-
-</body>
-</html>
+    </section>
+{% endblock %}

@@ -6,8 +6,9 @@ urlpatterns = [
     # --- Autenticación y Páginas Principales ---
     path('', views.index, name='index'), 
     path('home/', views.home, name='home'),
+    path('recuperacion/', views.recuperacion, name='recuperacion'),
     path('logout/', LogoutView.as_view(next_page='index'), name='logout'),
-
+    
     # --- Páginas Estáticas de Usuario ---
     path('perfil/', views.perfil, name='perfil'),
     path('configuracion/', views.configuracion, name='configuracion'),

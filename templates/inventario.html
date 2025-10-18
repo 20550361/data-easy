@@ -1,68 +1,87 @@
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nombre de la Página - DataEasy</title>
 
-  <!-- CSS general -->
-  <link rel="stylesheet" href="{% static 'css/home-style.css' %}">
-</head>
-<body>
+{% block title %}Inventario - DataEasy{% endblock %}
 
-  <!-- ===== BARRA SUPERIOR ===== -->
-  <header class="topbar">
-    <a href="{% url 'home' %}" class="brand" title="Volver al inicio">DataEasy</a>
-    <div class="user-menu-wrapper">
-      <img src="{% static 'img/user.png' %}" alt="Usuario" class="user-icon" id="userIcon">
-      <div class="dropdown-menu" id="dropdownMenu">
-        <a href="{% url 'logout' %}">🔒 Cerrar sesión</a>
-      </div>
+{% block styles %}
+    <style>
+        .stock-alerta { background-color: #fff3cd; color: #856404; font-weight: bold; }
+        .stock-critico { background-color: #f8d7da; color: #721c24; font-weight: bold; }
+    </style>
+{% endblock %}
+
+
+{% block content %}
+    <h2>📦 Inventario</h2>
+    <p>Gestiona todos los productos de tu inventario.</p>
+
+    <div class="toolbar">
+        <form method="GET" action="{% url 'inventario_lista' %}" class="search-form">
+            <input type="search" name="q" value="{{ search_query }}" placeholder="Buscar por producto, marca o categoría...">
+            <button type="submit">Buscar</button>
+        </form>
+        <div class="stats-box">
+            <span>Total Productos: <strong>{{ total_productos }}</strong></span>
+            <span>En Alerta: <strong class="stock-alerta">{{ total_alertas }}</strong></span>
+        </div>
     </div>
-  </header>
 
-  <!-- ===== CONTENEDOR PRINCIPAL ===== -->
-  <div class="main-container">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th>Marca</th>
+                    <th>Stock Actual</th>
+                    <th>Stock Mínimo</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for producto in page_obj %}
+                <tr>
+                    <td>{{ producto.nombre_producto }}</td>
+                    <td>{{ producto.categoria.nombre_categoria|default:"N/A" }}</td>
+                    <td>{{ producto.marca.nombre_marca|default:"N/A" }}</td>
+                    
+                    {% if producto.stock_actual == 0 %}
+                        <td class="stock-critico">{{ producto.stock_actual }}</td>
+                    {% elif producto.en_alerta_stock %}
+                        <td class="stock-alerta">{{ producto.stock_actual }}</td>
+                    {% else %}
+                        <td>{{ producto.stock_actual }}</td>
+                    {% endif %}
+                    
+                    <td>{{ producto.stock_minimo }}</td>
+                    
+                    <td>
+                        <a href="{% url 'inventario_editar' producto.id %}" class="btn-edit">Editar</a>
+                        <a href="{% url 'inventario_eliminar' producto.id %}" class="btn-delete">Eliminar</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6">No se encontraron productos.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-    <!-- ===== SIDEBAR ===== -->
-    <aside class="sidebar">
-      <div class="profile-section">
-        <img src="{% static 'img/user.png' %}" alt="Perfil" class="profile-pic">
-        <h3>{{ user.username }}</h3>
-      </div>
-
-      <nav class="sidebar-nav">
-        <a href="{% url 'perfil' %}" class="sidebar-btn">🧾 Mi ficha</a>
-        <a href="{% url 'inventario' %}" class="sidebar-btn">📦 Inventario</a>
-        <a href="{% url 'estadisticas' %}" class="sidebar-btn">📊 Estadísticas</a>
-        <a href="{% url 'gestion_usuarios' %}" class="sidebar-btn">👥 Gestión de usuarios</a>
-        <a href="{% url 'carga_datos' %}" class="sidebar-btn active">📁 Carga de datos</a>     
-      </nav>
-    </aside>
-
-    <!-- ===== CONTENIDO ===== -->
-    <main class="content">
-      <section class="page-content">
-        <h2>Título de la página</h2>
-        <p>Aquí va el contenido principal de esta sección.</p>
-      </section>
-    </main>
-  </div>
-
-  <!-- ===== SCRIPT ===== -->
-  <script>
-    // === Menú desplegable del usuario ===
-    const userIcon = document.getElementById('userIcon');
-    const dropdownMenu = document.getElementById('dropdownMenu');
-    document.addEventListener('click', (e) => {
-      if (userIcon.contains(e.target)) {
-        dropdownMenu.classList.toggle('show');
-      } else if (!dropdownMenu.contains(e.target)) {
-        dropdownMenu.classList.remove('show');
-      }
-    });
-  </script>
-
-</body>
-</html>
+    <div class="pagination">
+        <span class="page-info">
+            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}.
+        </span>
+        <div class="page-links">
+            {% if page_obj.has_previous %}
+                <a href="?page=1&q={{ search_query }}">&laquo; Primera</a>
+                <a href="?page={{ page_obj.previous_page_number }}&q={{ search_query }}">Anterior</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}&q={{ search_query }}">Siguiente</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}&q={{ search_query }}">Última &raquo;</a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
