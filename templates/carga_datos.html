@@ -1,72 +1,34 @@
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Carga de Datos - DataEasy</title>
-  <link rel="stylesheet" href="{% static 'css/home-style.css ' %}?v=1.0">
-</head>
-<body>
 
-  <!-- ===== BARRA SUPERIOR ===== -->
-  <header class="topbar">
-    <a href="{% url 'home' %}" class="brand">DataEasy</a>
-    <div class="user-menu-wrapper">
-      <img src="{% static 'img/user.png' %}" alt="Usuario" class="user-icon" id="userIcon">
-      <div class="dropdown-menu" id="dropdownMenu">
-        <a href="{% url 'perfil' %}">👤 Perfil</a>
-        <a href="{% url 'logout' %}">🔒 Cerrar sesión</a>
-      </div>
-    </div>
-  </header>
+{% block title %}Carga Masiva de Datos - DataEasy{% endblock %}
 
-  <!-- ===== CONTENEDOR PRINCIPAL ===== -->
-  <div class="main-container">
+{% block styles %}
+    {# Link to the new external CSS file #}
+    <link rel="stylesheet" href="{% static 'css/carga_datos.css' %}">
+{% endblock %}
 
-    <!-- ===== SIDEBAR ===== -->
-    <aside class="sidebar">
-      <div class="profile-section">
-        <img src="{% static 'img/user.png' %}" alt="Perfil" class="profile-pic">
-        <h3>{{ user.username }}</h3>
-      </div>
 
-      <nav class="sidebar-nav">
-        <a href="{% url 'home' %}" class="sidebar-btn">🏠 Inicio</a>
-        <a href="{% url 'perfil' %}" class="sidebar-btn">🧾 Mi ficha</a>
-        <a href="{% url 'inventario' %}" class="sidebar-btn">📦 Inventario</a>
-        <a href="{% url 'estadisticas' %}" class="sidebar-btn">📊 Estadísticas</a>
-        <a href="{% url 'gestion_usuarios' %}" class="sidebar-btn">👥 Gestión de usuarios</a>
-        <a href="{% url 'carga_datos' %}" class="sidebar-btn active">📁 Carga de datos</a>
-      </nav>
-    </aside>
+{% block content %}
+    <h2>📁 Carga Masiva de Datos</h2>
+    <p>Sube un archivo Excel (.xlsx o .xls) para registrar o actualizar productos en el inventario.</p>
+    <p><small>Columnas esperadas: `nombre_producto`, `categoria`, `marca`, `descripcion`, `stock_actual` (solo para nuevos), `stock_minimo`.</small></p>
 
-    <!-- ===== CONTENIDO PRINCIPAL ===== -->
-    <main class="content">
-      <section class="upload-card">
-        <h2>Carga de Datos Excel</h2>
-        <p>Selecciona un archivo Excel (.xlsx o .xls) para subirlo al sistema.</p>
+    <form method="post" enctype="multipart/form-data" class="upload-form">
+        {% csrf_token %}
+        
+        <label for="archivo_excel">Selecciona el archivo Excel:</label>
+        <input type="file" name="archivo_excel" id="archivo_excel" accept=".xlsx, .xls" required>
+        
+        <button type="submit">⬆️ Cargar Archivo</button>
+    </form>
 
-        <form method="POST" enctype="multipart/form-data">
-          {% csrf_token %}
-          <input type="file" name="archivo_excel" accept=".xlsx,.xls" required>
-          <button type="submit">⬆️ Subir archivo</button>
-        </form>
-      </section>
-    </main>
-  </div>
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
 
-  <script>
-    const userIcon = document.getElementById('userIcon');
-    const dropdownMenu = document.getElementById('dropdownMenu');
-    document.addEventListener('click', (e) => {
-      if (userIcon.contains(e.target)) {
-        dropdownMenu.classList.toggle('show');
-      } else if (!dropdownMenu.contains(e.target)) {
-        dropdownMenu.classList.remove('show');
-      }
-    });
-  </script>
-
-</body>
-</html>
+{% endblock %}
