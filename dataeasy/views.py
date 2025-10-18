@@ -102,15 +102,14 @@ def lista_inventario(request):
 @login_required
 def editar_producto(request, id_producto):
     """ (POR HACER) Lógica para editar un producto y ver/añadir movimientos. """
-    messages.info(request, "Función 'Editar Producto' pendiente de implementar.")
+    # messages.info(request, "Función 'Editar Producto' pendiente de implementar.") # <-- REMOVE THIS LINE
     return redirect('inventario_lista')
 
 @login_required
 def eliminar_producto(request, id_producto):
     """ (POR HACER) Lógica para eliminar un producto. """
-    messages.info(request, "Función 'Eliminar Producto' pendiente de implementar.")
+    # messages.info(request, "Función 'Eliminar Producto' pendiente de implementar.") # <-- REMOVE THIS LINE
     return redirect('inventario_lista')
-
 
 # --- 4. VISTAS DE GESTIÓN DE USUARIOS 👥 ---
 
@@ -124,15 +123,14 @@ def lista_usuarios(request):
 @login_required
 def crear_usuario(request):
     """ (POR HACER) Lógica para crear nuevos usuarios. """
-    messages.info(request, "Función 'Crear Usuario' pendiente de implementar.")
+    # messages.info(request, "Función 'Crear Usuario' pendiente de implementar.") # <-- REMOVE THIS LINE
     return redirect('lista_usuarios')
 
 @login_required
 def editar_usuario(request, pk):
     """ (POR HACER) Lógica para editar roles/datos de usuarios. """
-    messages.info(request, "Función 'Editar Usuario' pendiente de implementar.")
+    # messages.info(request, "Función 'Editar Usuario' pendiente de implementar.") # <-- REMOVE THIS LINE
     return redirect('lista_usuarios')
-
 
 # --- 5. VISTAS DE DATOS Y ANALÍTICAS 📊 ---
 
@@ -167,7 +165,7 @@ def estadisticas(request):
     stock_critico_marca_qs = (
         Producto.objects.filter(stock_actual__lt=F('stock_minimo'), marca__isnull=False)
         .values('marca__nombre_marca')
-        .annotate(cantidad=Count('id_producto'))
+        .annotate(cantidad=Count('id'))
         .order_by('-cantidad')
     )
     stock_critico_marca = [{'marca': r['marca__nombre_marca'], 'cantidad': r['cantidad']} for r in stock_critico_marca_qs]

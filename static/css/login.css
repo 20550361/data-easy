@@ -1,0 +1,159 @@
+/* static/css/login.css */
+
+/* === CONFIGURACIÓN GLOBAL === */
+:root {
+    /* Colores (usamos los mismos del base.css para consistencia) */
+    --color-fondo-login: #ECF0F1;     /* Gris claro */
+    --color-principal: #2C3E50;       /* Azul oscuro */
+    --color-acento: #E67E22;           /* Naranja */
+    --color-texto-principal: #34495E; /* Azul grisáceo */
+    --color-blanco: #FFFFFF;
+    --sombra-ligera: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+body.login-page {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--color-fondo-login);
+    display: flex; /* Centra el contenedor vertical y horizontalmente */
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh; /* Ocupa toda la altura */
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* === CONTENEDOR PRINCIPAL DEL LOGIN === */
+.login-container {
+    display: flex;
+    background-color: var(--color-blanco);
+    border-radius: 10px;
+    box-shadow: var(--sombra-ligera);
+    max-width: 800px;
+    width: 100%;
+    overflow: hidden; /* Para que el borde redondeado afecte a las secciones internas */
+}
+
+/* === SECCIÓN IZQUIERDA (LOGO) === */
+.logo-section {
+    background-color: var(--color-principal); /* Fondo azul oscuro */
+    padding: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 40%; /* Ocupa el 40% del ancho */
+}
+
+.logo-section img {
+    max-width: 150px; /* Ajusta el tamaño del logo */
+    width: 100%;
+    height: auto;
+}
+
+/* === SECCIÓN DERECHA (FORMULARIO) === */
+.form-section {
+    padding: 40px;
+    width: 60%; /* Ocupa el 60% del ancho */
+    box-sizing: border-box;
+}
+
+.form-section h2 {
+    color: var(--color-principal);
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 30px;
+    font-size: 1.8rem;
+}
+
+.form-section form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Espacio entre campos */
+}
+
+.form-section input[type="text"],
+.form-section input[type="password"] {
+    padding: 12px 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1rem;
+    outline: none; /* Quita el borde azul al hacer foco */
+    transition: border-color 0.2s;
+}
+
+.form-section input[type="text"]:focus,
+.form-section input[type="password"]:focus {
+    border-color: var(--color-acento); /* Borde naranja al seleccionar */
+}
+
+.form-section button {
+    background-color: var(--color-acento); /* Botón naranja */
+    color: var(--color-blanco);
+    padding: 14px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    text-transform: uppercase;
+    transition: background-color 0.2s;
+    margin-top: 10px; /* Espacio extra arriba del botón */
+}
+
+.form-section button:hover {
+    background-color: #d35400; /* Naranja más oscuro */
+}
+
+/* Enlace "¿Olvidaste tu contraseña?" */
+.forgot-password-link {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.9rem;
+}
+
+.forgot-password-link a {
+    color: var(--color-principal); /* Azul oscuro */
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.forgot-password-link a:hover {
+    text-decoration: underline;
+}
+
+/* Mensaje de Error */
+.error {
+    color: #e74c3c; /* Rojo */
+    background-color: #fdd;
+    border: 1px solid #e74c3c;
+    padding: 10px;
+    border-radius: 5px;
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.9rem;
+}
+
+/* === RESPONSIVIDAD PARA MÓVILES === */
+@media (max-width: 768px) {
+    .login-container {
+        flex-direction: column; /* Apila las secciones */
+        max-width: 400px; /* Más estrecho en móviles */
+    }
+
+    .logo-section,
+    .form-section {
+        width: 100%; /* Ocupan todo el ancho */
+    }
+
+    .logo-section {
+        padding: 30px; /* Menos padding */
+    }
+    
+    .logo-section img {
+        max-width: 100px; /* Logo más pequeño */
+    }
+
+    .form-section {
+        padding: 30px;
+    }
+}

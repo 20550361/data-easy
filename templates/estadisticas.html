@@ -1,68 +1,195 @@
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nombre de la Página - DataEasy</title>
 
-  <!-- CSS general -->
-  <link rel="stylesheet" href="{% static 'css/home-style.css' %}">
-</head>
-<body>
+{% block title %}Estadísticas - DataEasy{% endblock %}
 
-  <!-- ===== BARRA SUPERIOR ===== -->
-  <header class="topbar">
-    <a href="{% url 'home' %}" class="brand" title="Volver al inicio">DataEasy</a>
-    <div class="user-menu-wrapper">
-      <img src="{% static 'img/user.png' %}" alt="Usuario" class="user-icon" id="userIcon">
-      <div class="dropdown-menu" id="dropdownMenu">
-        <a href="{% url 'logout' %}">🔒 Cerrar sesión</a>
-      </div>
-    </div>
-  </header>
+{% block styles %}
+    {# Link to the specific CSS for this page #}
+    <link rel="stylesheet" href="{% static 'css/estadisticas.css' %}">
+{% endblock %}
 
-  <!-- ===== CONTENEDOR PRINCIPAL ===== -->
-  <div class="main-container">
 
-    <!-- ===== SIDEBAR ===== -->
-    <aside class="sidebar">
-      <div class="profile-section">
-        <img src="{% static 'img/user.png' %}" alt="Perfil" class="profile-pic">
-        <h3>{{ user.username }}</h3>
-      </div>
+{% block content %}
+    <h2>📊 Estadísticas del Inventario</h2>
+    <p>Visualiza el rendimiento y estado de tu inventario.</p>
 
-      <nav class="sidebar-nav">
-        <a href="{% url 'perfil' %}" class="sidebar-btn">🧾 Mi ficha</a>
-        <a href="{% url 'inventario' %}" class="sidebar-btn">📦 Inventario</a>
-        <a href="{% url 'estadisticas' %}" class="sidebar-btn">📊 Estadísticas</a>
-        <a href="{% url 'gestion_usuarios' %}" class="sidebar-btn">👥 Gestión de usuarios</a>
-        <a href="{% url 'carga_datos' %}" class="sidebar-btn active">📁 Carga de datos</a>
-      </nav>
-    </aside>
+    <form method="GET" class="date-filter-form">
+        <label for="fecha_inicio">Desde:</label>
+        <input type="date" id="fecha_inicio" name="fecha_inicio" value="{{ fecha_inicio|date:'Y-m-d' }}">
+        
+        <label for="fecha_fin">Hasta:</label>
+        <input type="date" id="fecha_fin" name="fecha_fin" value="{{ fecha_fin|date:'Y-m-d' }}">
+        
+        <button type="submit">🔍 Filtrar</button>
+    </form>
 
-    <!-- ===== CONTENIDO ===== -->
-    <main class="content">
-      <section class="page-content">
-        <h2>Título de la página</h2>
-        <p>Aquí va el contenido principal de esta sección.</p>
-      </section>
-    </main>
-  </div>
+    <section class="stats-summary">
+        <div class="stat-card">
+            <h3>Total Productos</h3>
+            <div class="value">{{ total_productos }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Stock Total (Unidades)</h3>
+            <div class="value">{{ stock_total|default:"0" }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Total Categorías</h3>
+            <div class="value">{{ total_categorias }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Total Marcas</h3>
+            <div class="value">{{ total_marcas }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Total Movimientos (Rango)</h3>
+            <div class="value">{{ total_movimientos }}</div> {# Assuming total_movimientos is passed #}
+        </div>
+    </section>
 
-  <!-- ===== SCRIPT ===== -->
-  <script>
-    // === Menú desplegable del usuario ===
-    const userIcon = document.getElementById('userIcon');
-    const dropdownMenu = document.getElementById('dropdownMenu');
-    document.addEventListener('click', (e) => {
-      if (userIcon.contains(e.target)) {
-        dropdownMenu.classList.toggle('show');
-      } else if (!dropdownMenu.contains(e.target)) {
-        dropdownMenu.classList.remove('show');
-      }
-    });
-  </script>
+    <section class="charts-grid">
+        <div class="chart-container">
+            <h3>Movimientos por Mes</h3>
+            <canvas id="movimientosMesChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>Stock por Categoría</h3>
+            <canvas id="stockCategoriaChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>Marcas con Stock Crítico</h3>
+            <canvas id="stockCriticoMarcaChart"></canvas>
+        </div>
+    </section>
 
-</body>
-</html>
+    <section class="low-stock-lists">
+        <div class="stock-list-container">
+            <h3>⚠️ Productos Bajo Stock Mínimo</h3>
+            <ul>
+                {% for prod in productos_bajo_stock %}
+                <li>
+                    <a href="{% url 'inventario_editar' prod.id %}">{{ prod.nombre_producto }}</a>
+                    <span class="stock-level">({{ prod.stock_actual }}/{{ prod.stock_minimo }})</span>
+                </li>
+                {% empty %}
+                <li>No hay productos bajo el mínimo.</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="stock-list-container">
+            <h3>🚫 Productos Sin Stock</h3>
+            <ul>
+                {% for prod in productos_sin_stock %}
+                <li>
+                    <a href="{% url 'inventario_editar' prod.id %}">{{ prod.nombre_producto }}</a>
+                </li>
+                {% empty %}
+                <li>No hay productos sin stock.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </section>
+
+{% endblock %}
+
+
+{% block scripts %}
+    {# Include Chart.js library (CDN) #}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // Get the data passed from the Django view
+        const chartData = JSON.parse('{{ chart_data_json|escapejs }}');
+
+        // --- Configuration Helper ---
+        const commonChartOptions = {
+            responsive: true,
+            maintainAspectRatio: false // Key for fitting in fixed containers
+        };
+
+        // --- 1. Movimientos por Mes (Line Chart) ---
+        const ctxMovimientos = document.getElementById('movimientosMesChart')?.getContext('2d');
+        if (ctxMovimientos && chartData.meses) { // Added check for chartData.meses
+            new Chart(ctxMovimientos, {
+                type: 'line',
+                data: {
+                    labels: chartData.meses,
+                    datasets: [{
+                        label: 'Entradas',
+                        data: chartData.entradas,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1,
+                        fill: false
+                    }, {
+                        label: 'Salidas',
+                        data: chartData.salidas,
+                        borderColor: 'rgb(255, 99, 132)',
+                        tension: 0.1,
+                        fill: false
+                    }]
+                },
+                options: {
+                    ...commonChartOptions,
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        } else {
+             console.error("Could not find canvas for Movimientos chart or data is missing.");
+        }
+
+
+        // --- 2. Stock por Categoría (Pie Chart) ---
+        const ctxStockCat = document.getElementById('stockCategoriaChart')?.getContext('2d');
+         if (ctxStockCat && chartData.stock_por_categoria_labels) { // Added check for data
+            new Chart(ctxStockCat, {
+                type: 'pie',
+                data: {
+                    labels: chartData.stock_por_categoria_labels,
+                    datasets: [{
+                        label: 'Unidades en Stock',
+                        data: chartData.stock_por_categoria_values,
+                        backgroundColor: [
+                            '#3498DB', '#E74C3C', '#9B59B6', '#F1C40F', '#2ECC71',
+                            '#1ABC9C', '#E67E22', '#BDC3C7', '#7F8C8D', '#34495E'
+                        ],
+                        hoverOffset: 4
+                    }]
+                },
+                options: { ...commonChartOptions }
+            });
+        } else {
+            console.error("Could not find canvas for Stock Categoria chart or data is missing.");
+        }
+
+        // --- 3. Marcas con Stock Crítico (Bar Chart) ---
+        const ctxStockCritico = document.getElementById('stockCriticoMarcaChart')?.getContext('2d');
+        if (ctxStockCritico && chartData.stock_critico_marca_labels) { // Added check for data
+            new Chart(ctxStockCritico, {
+                type: 'bar',
+                data: {
+                    labels: chartData.stock_critico_marca_labels,
+                    datasets: [{
+                        label: 'Nº Productos Críticos',
+                        data: chartData.stock_critico_marca_values,
+                        backgroundColor: 'rgba(230, 126, 34, 0.6)',
+                        borderColor: 'rgba(230, 126, 34, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    ...commonChartOptions,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+        } else {
+             console.error("Could not find canvas for Stock Critico chart or data is missing.");
+        }
+    </script>
+{% endblock %}

@@ -1,0 +1,175 @@
+/* static/css/estadisticas.css */
+
+/* === Filter Form === */
+.date-filter-form {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: var(--sombra-ligera);
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap; /* Allows items to wrap on smaller screens */
+}
+
+.date-filter-form label {
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.date-filter-form input[type="date"] {
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.date-filter-form button {
+    background-color: var(--color-principal, #2C3E50); /* Use variable if available */
+    color: var(--color-texto, #FFFFFF);
+    padding: 10px 18px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+.date-filter-form button:hover {
+    background-color: var(--color-sidebar-hover, #34495E);
+}
+
+/* === Summary Statistics Cards === */
+.stats-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* Responsive grid */
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: var(--sombra-ligera);
+    text-align: center;
+}
+
+.stat-card h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1rem;
+    color: #555;
+}
+
+.stat-card .value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--color-principal, #2C3E50);
+}
+
+/* === Chart Containers === */
+.charts-grid {
+    display: grid;
+    /* Adjust grid columns */
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); /* Min width for fixed size */
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.chart-container {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: var(--sombra-ligera);
+    /* --- FIXED SIZE --- */
+    height: 350px; /* Set a fixed height (adjust as needed) */
+    position: relative; /* Needed for Chart.js responsiveness */
+}
+
+.chart-container h3 {
+    margin-top: 0;
+    text-align: center;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+/* Ensure canvas doesn't overflow and respects container */
+.chart-container canvas {
+    max-width: 100%;
+    max-height: 100%;
+    /* Remove explicit width/height if set in HTML */
+    width: auto !important;
+    height: auto !important;
+}
+
+
+/* === Low Stock Lists === */
+.low-stock-lists {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Two columns */
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.stock-list-container {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: var(--sombra-ligera);
+}
+
+.stock-list-container h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.stock-list-container ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 200px; /* Limit height and add scroll */
+    overflow-y: auto;
+}
+
+.stock-list-container li {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+.stock-list-container li:last-child {
+    border-bottom: none;
+}
+.stock-list-container li .stock-level {
+    font-size: 0.9em;
+    color: #e74c3c; /* Red color for low stock indication */
+    float: right;
+}
+
+/* === Media Queries for Responsiveness === */
+@media (max-width: 1200px) { /* Adjust breakpoint if using fixed width */
+    .charts-grid {
+        /* If fixed width makes columns too tight, switch to single column earlier */
+         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .low-stock-lists {
+        grid-template-columns: 1fr; /* Stack lists vertically */
+    }
+}
+
+@media (max-width: 576px) {
+    .stats-summary {
+        grid-template-columns: 1fr 1fr; /* Two cards per row */
+    }
+     .date-filter-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .date-filter-form input[type="date"] {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
