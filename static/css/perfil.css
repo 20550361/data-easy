@@ -1,0 +1,114 @@
+/* =========================================================
+   PERFIL DE USUARIO - estilos específicos
+========================================================= */
+
+.content {
+  flex: 1;
+  background-color: #f4f4f9;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+
+.user-info-card {
+  background-color: #ffffff;
+  padding: 40px 50px;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  max-width: 600px;
+  width: 100%;
+  text-align: left;
+}
+
+.user-info-card h2 {
+  text-align: center;
+  color: #1e293b;
+  margin-bottom: 25px;
+  font-size: 22px;
+  border-bottom: 2px solid #cbd5e1;
+  padding-bottom: 10px;
+}
+
+/* Campos del formulario */
+.user-info-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: bold;
+  color: #1e293b;
+  margin-bottom: 5px;
+}
+
+.form-group input {
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: #f9fafb;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus {
+  border-color: #0078d7;
+  outline: none;
+}
+
+.form-group input:disabled {
+  background-color: #e2e8f0;
+  color: #475569;
+}
+
+/* Botones */
+.button-group {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.edit-btn,
+.save-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  color: white;
+}
+
+.edit-btn {
+  background-color: #0078d7;
+}
+.edit-btn:hover {
+  background-color: #005fa3;
+}
+
+.save-btn {
+  background-color: #16a34a;
+}
+.save-btn:hover {
+  background-color: #15803d;
+}
+
+/* Centrado y responsive */
+@media (max-width: 768px) {
+  .content {
+    align-items: flex-start;
+    padding: 20px;
+  }
+
+  .user-info-card {
+    padding: 25px;
+    margin-top: 30px;
+  }
+}

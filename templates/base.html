@@ -1,0 +1,81 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>{% block title %}DataEasy{% endblock %}</title>
+    
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    
+    {% block styles %}{% endblock %}
+</head>
+<body>
+
+    <header class="topbar">
+        <a href="{% url 'home' %}" class="logo-link">
+            <h1 class="logo">DataEasy</h1>
+        </a>
+        
+        <div class="user-menu-wrapper">
+            <img src="{% static 'img/user.png' %}" alt="Usuario" class="user-icon" id="userIcon">
+            <div class="dropdown-menu" id="dropdownMenu">
+                <a href="{% url 'perfil' %}">🧾 Mi ficha</a>
+                <a href="{% url 'logout' %}">🔒 Cerrar sesión</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+
+        <aside class="sidebar" id="sidebar">
+            
+            <div class="profile-section">
+                <div class="profile-pic-container">
+                    <img src="{% static 'img/user.png' %}" alt="Perfil" class="profile-pic">
+                </div>
+                <h3>{{ user.username }}</h3>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="{% url 'home' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+                    🏠 Home
+                </a>
+                <a href="{% url 'perfil' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'perfil' %}active{% endif %}">
+                    🧾 Mi ficha
+                </a>
+                <a href="{% url 'inventario_lista' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'inventario_lista' %}active{% endif %}">
+                    📦 Inventario
+                </a>
+                <a href="{% url 'estadisticas' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'estadisticas' %}active{% endif %}">
+                    📊 Estadísticas
+                </a>
+                <a href="{% url 'lista_usuarios' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'lista_usuarios' %}active{% endif %}">
+                    👥 Gestión de usuarios
+                </a>
+                <a href="{% url 'carga_datos' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'carga_datos' %}active{% endif %}">
+                    📁 Carga de datos
+                </a>
+            </nav>
+        </aside>
+        
+        <main class="content-area"> 
+            {% block content %}
+            {% endblock %}
+        </main>
+
+    </div> <script>
+    const userIcon = document.getElementById('userIcon');
+    const dropdownMenu = document.getElementById('dropdownMenu');
+    document.addEventListener('click', (e) => {
+        if (userIcon && userIcon.contains(e.target)) {
+            dropdownMenu.classList.toggle('show');
+        } else if (dropdownMenu && !dropdownMenu.contains(e.target) && !userIcon.contains(e.target)) {
+            dropdownMenu.classList.remove('show');
+        }
+    });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

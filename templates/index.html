@@ -1,0 +1,52 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - DataEasy</title>
+    
+    {# Link to the new login CSS file #}
+    <link rel="stylesheet" href="{% static 'css/login.css' %}">
+</head>
+<body class="login-page">
+
+    <div class="login-container">
+
+        <div class="logo-section">
+            <img src="{% static 'img/logo_dataeasy.png' %}" alt="Logo DataEasy">
+        </div>
+
+        <div class="form-section">
+            <h2>Iniciar Sesión</h2>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="text" name="username" placeholder="Usuario" required autocomplete="username">
+                <input type="password" name="password" placeholder="Contraseña" required autocomplete="current-password">
+                <button type="submit">Entrar</button>
+            </form>
+
+            <p class="forgot-password-link">
+                <a href="{% url 'recuperacion' %}">
+                    ¿Olvidaste tu contraseña?
+                </a>
+            </p>
+
+            {# Display error message if login fails #}
+            {% if messages %}
+                {% for message in messages %}
+                    {% if message.tags == 'error' %}
+                        <p class="error">{{ message }}</p>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+            {# Fallback for the old 'error' context variable, though messages are preferred #}
+            {% if error and not messages %}
+                 <p class="error">{{ error }}</p>
+            {% endif %}
+        </div>
+
+    </div>
+
+</body>
+</html>
