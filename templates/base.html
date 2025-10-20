@@ -1,4 +1,4 @@
-{% load static %}
+{% load static %} 
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -21,7 +21,12 @@
             <img src="{% static 'img/user.png' %}" alt="Usuario" class="user-icon" id="userIcon">
             <div class="dropdown-menu" id="dropdownMenu">
                 <a href="{% url 'perfil' %}">🧾 Mi ficha</a>
-                <a href="{% url 'logout' %}">🔒 Cerrar sesión</a>
+                <a href="#" id="logoutLink">🔒 Cerrar sesión</a>
+
+                <!-- Formulario oculto para logout (POST seguro) -->
+                <form id="logoutForm" action="{% url 'logout' %}" method="post" style="display:none;">
+                    {% csrf_token %}
+                </form>
             </div>
         </div>
     </header>
@@ -64,7 +69,10 @@
             {% endblock %}
         </main>
 
-    </div> <script>
+    </div>
+
+    <script>
+    // --- Control del menú desplegable del usuario ---
     const userIcon = document.getElementById('userIcon');
     const dropdownMenu = document.getElementById('dropdownMenu');
     document.addEventListener('click', (e) => {
@@ -74,6 +82,16 @@
             dropdownMenu.classList.remove('show');
         }
     });
+
+    // --- Logout seguro con POST sin alterar el estilo del enlace ---
+    const logoutLink = document.getElementById('logoutLink');
+    const logoutForm = document.getElementById('logoutForm');
+    if (logoutLink && logoutForm) {
+        logoutLink.addEventListener('click', function (e) {
+            e.preventDefault();
+            logoutForm.submit();
+        });
+    }
     </script>
     
     {% block scripts %}{% endblock %}

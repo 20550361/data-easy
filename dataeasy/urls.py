@@ -7,7 +7,7 @@ urlpatterns = [
     path('', views.index, name='index'), 
     path('home/', views.home, name='home'),
     path('recuperacion/', views.recuperacion, name='recuperacion'),
-    path('logout/', LogoutView.as_view(next_page='index'), name='logout'),
+    path('logout/', LogoutView.as_view(template_name='logout.html'), name='logout'),
     
     # --- Páginas Estáticas de Usuario ---
     path('perfil/', views.perfil, name='perfil'),
