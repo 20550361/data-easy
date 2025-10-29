@@ -26,4 +26,14 @@ urlpatterns = [
     # --- Datos y Analíticas ---
     path('estadisticas/', views.estadisticas, name='estadisticas'),
     path('carga_datos/', views.carga_datos, name='carga_datos'),
+
+
+
+    # Auditor
+    path('auditor/home/', views.auditor_home, name='auditor_home'),
+    path('auditor/perfil/', views.auditor_perfil, name='auditor_perfil'),
+    path('auditor/usuarios/', views.auditor_usuarios, name='auditor_usuarios'),
+    path('auditor/estadisticas/', views.auditor_estadisticas, name='auditor_estadisticas'),
+
+
 ]

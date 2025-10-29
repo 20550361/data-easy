@@ -1,0 +1,88 @@
+{% load static %} 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}DataEasy{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  {% block styles %}{% endblock %}
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <a href="{% url 'auditor_home' %}" class="logo-link">
+      <h1 class="logo">DataEasy</h1>
+    </a>
+
+    <div class="user-menu-wrapper">
+      <img src="{% static 'img/user.png' %}" alt="Usuario" class="user-icon" id="userIcon">
+      <div class="dropdown-menu" id="dropdownMenu">
+        <a href="{% url 'auditor_perfil' %}">🧾 Mi ficha</a>
+        <a href="#" id="logoutLink">🔒 Cerrar sesión</a>
+        <form id="logoutForm" action="{% url 'logout' %}" method="post" style="display:none;">
+          {% csrf_token %}
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <!-- LAYOUT -->
+  <div class="main-container">
+    <aside class="sidebar" id="sidebar">
+      <div class="profile-section">
+        <div class="profile-pic-container">
+          <img src="{% static 'img/user.png' %}" alt="Perfil" class="profile-pic">
+        </div>
+        <h3>{{ user.username }}</h3>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="{% url 'auditor_home' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'auditor_home' %}active{% endif %}">
+          🏠 Home
+        </a>
+        <a href="{% url 'auditor_perfil' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'auditor_perfil' %}active{% endif %}">
+          🧾 Mi ficha
+        </a>
+        <a href="{% url 'auditor_usuarios' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'auditor_usuarios' %}active{% endif %}">
+          👥 Gestión de usuarios
+        </a>
+        <a href="{% url 'auditor_estadisticas' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'auditor_estadisticas' %}active{% endif %}">
+          📊 Estadísticas
+        </a>
+      </nav>
+    </aside>
+
+    <main class="content-area">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script>
+    // Dropdown usuario
+    const userIcon = document.getElementById('userIcon');
+    const dropdownMenu = document.getElementById('dropdownMenu');
+    document.addEventListener('click', (e) => {
+      if (userIcon && userIcon.contains(e.target)) {
+        dropdownMenu.classList.toggle('show');
+      } else if (dropdownMenu && !dropdownMenu.contains(e.target) && !userIcon.contains(e.target)) {
+        dropdownMenu.classList.remove('show');
+      }
+    });
+
+    // Logout POST
+    const logoutLink = document.getElementById('logoutLink');
+    const logoutForm = document.getElementById('logoutForm');
+    if (logoutLink && logoutForm) {
+      logoutLink.addEventListener('click', function (e) {
+        e.preventDefault();
+        logoutForm.submit();
+      });
+    }
+  </script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

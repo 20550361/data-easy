@@ -1,0 +1,51 @@
+{% extends 'auditor/base_auditor.html' %}
+
+{% load static %}
+
+{% block title %}Home Auditor - DataEasy{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'css/home-style.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="welcome-banner">
+  <h2>Bienvenido, {{ user.username }}</h2>
+  <p>Este es tu panel principal en DataEasy</p>
+</section>
+
+<section class="dashboard-panels">
+  <div class="recent-items">
+    <h3>Últimos movimientos</h3>
+    <ul>
+      {% for mov in movimientos_recientes %}
+        <li>
+          <strong>{{ mov.tipo_movimiento|capfirst }}</strong>:
+          {{ mov.cantidad }} x {{ mov.producto.nombre_producto }}
+          <span class="fecha">{{ mov.fecha_movimiento|date:"d M Y" }}</span>
+        </li>
+      {% empty %}
+        <p>No hay movimientos recientes.</p>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="low-stock">
+    <h3>⚠️ Artículos con bajo stock</h3>
+    <ul>
+      {% for prod in productos_bajo_stock %}
+        <li>
+          <a href="{% url 'inventario_editar' prod.id %}">
+            {{ prod.nombre_producto }}
+            <span class="stock-level">
+              Quedan: {{ prod.stock_actual }} (Min: {{ prod.stock_minimo }})
+            </span>
+          </a>
+        </li>
+      {% empty %}
+        <p>No hay productos en alerta.</p>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% endblock %}
