@@ -35,5 +35,10 @@ urlpatterns = [
     path('auditor/usuarios/', views.auditor_usuarios, name='auditor_usuarios'),
     path('auditor/estadisticas/', views.auditor_estadisticas, name='auditor_estadisticas'),
 
+    # --- Rutas Rol Inventario ---
 
+    path('inv/home/', views.inv_home, name='inv_home'),
+    path('inv/perfil/', views.inv_perfil, name='inv_perfil'),
+    path('inv/lista/', views.inv_inventario, name='inv_inventario'),
+    path('inv/carga_datos/', views.inv_carga_datos, name='inv_carga_datos'),
 ]

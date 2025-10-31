@@ -1,4 +1,4 @@
-{% load static %}
+{% load static %} 
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - DataEasy</title>
     
-    {# Link to the new login CSS file #}
     <link rel="stylesheet" href="{% static 'css/login.css' %}">
 </head>
 <body class="login-page">
@@ -27,12 +26,9 @@
             </form>
 
             <p class="forgot-password-link">
-                <a href="{% url 'recuperacion' %}">
-                    ¿Olvidaste tu contraseña?
-                </a>
+                <a href="{% url 'recuperacion' %}">¿Olvidaste tu contraseña?</a>
             </p>
 
-            {# Display error message if login fails #}
             {% if messages %}
                 {% for message in messages %}
                     {% if message.tags == 'error' %}
@@ -40,9 +36,9 @@
                     {% endif %}
                 {% endfor %}
             {% endif %}
-            {# Fallback for the old 'error' context variable, though messages are preferred #}
+
             {% if error and not messages %}
-                 <p class="error">{{ error }}</p>
+                <p class="error">{{ error }}</p>
             {% endif %}
         </div>
 

@@ -1,15 +1,11 @@
 # --- 1. IMPORTACIONES ---
 
-# Python Standard Library
 import json
 from datetime import datetime, timedelta
-
-# Third-Party Libraries
 import pandas as pd  # pip install pandas openpyxl
 
-# Django Core
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.core.serializers.json import DjangoJSONEncoder
@@ -18,15 +14,13 @@ from django.db.models import Sum, Count, F, Q
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 
-# Django Models
 from django.contrib.auth.models import User
-
-# Local App Imports
 from .models import Producto, Categoria, Marca, MovimientoInventario
 
 
 # --- 1.1 Helper de grupos ---
 def groups_required(*group_names, login_url='index'):
+    """Permite acceso a usuarios autenticados que pertenezcan a uno o más grupos."""
     def in_groups(u):
         if not u.is_authenticated:
             return False
@@ -36,27 +30,40 @@ def groups_required(*group_names, login_url='index'):
     return user_passes_test(in_groups, login_url=login_url)
 
 
-# --- 2. VISTAS DE AUTENTICACIÓN Y NÚCLEO 🌐 ---
+# --- 2. LOGIN Y PÁGINAS BÁSICAS 🌐 ---
 
 def index(request):
-    """ Vista de Login """
+    """ Vista de Login con redirección según grupo """
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
         user = authenticate(request, username=username, password=password)
+
         if user is not None:
             login(request, user)
-            if user.groups.filter(name='Auditor').exists() and not user.is_superuser:
+
+            # 🔀 Redirección según grupo
+            if user.is_superuser:
+                return redirect("home")
+
+            if user.groups.filter(name='Auditor').exists():
                 return redirect("auditor_home")
+
+            if user.groups.filter(name='Inventario').exists():
+                return redirect("inv_home")
+
             return redirect("home")
+
         else:
             messages.error(request, "Usuario o contraseña incorrectos")
             return render(request, "index.html")
+
     return render(request, "index.html")
 
 
 @login_required
 def home(request):
+    """Home general (admin u otros grupos)"""
     productos_bajo_stock = Producto.objects.filter(stock_actual__lt=F('stock_minimo')).order_by('stock_actual')[:5]
     movimientos_recientes = MovimientoInventario.objects.select_related('producto').order_by('-fecha_movimiento')[:5]
     context = {
@@ -80,11 +87,11 @@ def recuperacion(request):
     return render(request, 'recuperacion.html')
 
 
-# --- 3. VISTAS DE INVENTARIO 📦 ---
+# --- 3. INVENTARIO 📦 ---
 
 @login_required
 def lista_inventario(request):
-    query = request.GET.get('q', '') 
+    query = request.GET.get('q', '')
     if query:
         productos_list = Producto.objects.filter(
             Q(nombre_producto__icontains=query) |
@@ -139,8 +146,8 @@ def editar_usuario(request, pk):
     return redirect('lista_usuarios')
 
 
-# --- 5. DATOS Y ANALÍTICAS 📊 ---
-# Helper compartido para reutilizar el mismo contexto entre auditor y admin
+# --- 5. DATOS Y ESTADÍSTICAS 📊 ---
+
 def _build_estadisticas_context(request):
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
@@ -156,6 +163,7 @@ def _build_estadisticas_context(request):
     total_categorias = Categoria.objects.count()
     total_marcas = Marca.objects.count()
     total_movimientos = MovimientoInventario.objects.count()
+
     productos_bajo_stock = Producto.objects.filter(stock_actual__lt=F('stock_minimo')).order_by('stock_actual')
     productos_sin_stock = Producto.objects.filter(stock_actual=0)
 
@@ -164,10 +172,7 @@ def _build_estadisticas_context(request):
         .annotate(total=Sum('stock_actual'))
         .order_by('-total')
     )
-    stock_por_categoria = [
-        {'categoria': r['categoria__nombre_categoria'] or 'Sin categoría', 'total': r['total'] or 0}
-        for r in stock_por_categoria_qs
-    ]
+    stock_por_categoria = [{'categoria': r['categoria__nombre_categoria'] or 'Sin categoría', 'total': r['total'] or 0} for r in stock_por_categoria_qs]
 
     stock_critico_marca_qs = (
         Producto.objects.filter(stock_actual__lt=F('stock_minimo'), marca__isnull=False)
@@ -178,12 +183,10 @@ def _build_estadisticas_context(request):
     stock_critico_marca = [{'marca': r['marca__nombre_marca'], 'cantidad': r['cantidad']} for r in stock_critico_marca_qs]
 
     movimientos = MovimientoInventario.objects.filter(fecha_movimiento__date__range=[fecha_inicio, fecha_fin])
-    movimientos_por_mes = (movimientos
-        .annotate(mes=TruncMonth('fecha_movimiento'))
+    movimientos_por_mes = (movimientos.annotate(mes=TruncMonth('fecha_movimiento'))
         .values('mes', 'tipo_movimiento')
         .annotate(total=Sum('cantidad'))
-        .order_by('mes')
-    )
+        .order_by('mes'))
 
     meses, entradas, salidas = [], {}, {}
     curr = fecha_inicio.replace(day=1)
@@ -222,6 +225,7 @@ def _build_estadisticas_context(request):
         'fecha_fin': fecha_fin,
     }
 
+
 @login_required
 @groups_required('Auditor', 'Administrador')
 def estadisticas(request):
@@ -229,14 +233,17 @@ def estadisticas(request):
     context['base_template'] = 'base.html'
     return render(request, 'estadisticas.html', context)
 
+
 @login_required
 @groups_required('Auditor')
 def auditor_estadisticas(request):
     context = _build_estadisticas_context(request)
-    context['base_template'] = 'base_auditor.html'
+    context['base_template'] = 'auditor/base_auditor.html'
     return render(request, 'estadisticas.html', context)
 
-# --- 6. CARGA DE DATOS (Excel) 📁 ---
+
+# --- 6. CARGA DE DATOS 📁 ---
+
 @login_required
 def carga_datos(request):
     if request.method == 'POST' and request.FILES.get('archivo_excel'):
@@ -250,11 +257,11 @@ def carga_datos(request):
             if columnas_faltantes:
                 messages.error(request, f"❌ Faltan columnas: {', '.join(columnas_faltantes)}")
                 return redirect('carga_datos')
-            productos_creados = 0
-            productos_actualizados = 0
+            productos_creados, productos_actualizados = 0, 0
             for _, row in df.iterrows():
                 nombre = str(row.get('nombre_producto', '')).strip()
-                if not nombre: continue
+                if not nombre: 
+                    continue
                 categoria_nombre = str(row.get('categoria', '')).strip() if pd.notna(row.get('categoria')) else None
                 marca_nombre = str(row.get('marca', '')).strip() if pd.notna(row.get('marca')) else None
                 descripcion_val = str(row.get('descripcion', '')).strip() if pd.notna(row.get('descripcion')) else None
@@ -268,18 +275,11 @@ def carga_datos(request):
                     'marca': marca,
                     'stock_minimo': stock_minimo_val,
                 }
-                producto, created = Producto.objects.update_or_create(
-                    nombre_producto=nombre,
-                    defaults=defaults_producto
-                )
+                producto, created = Producto.objects.update_or_create(nombre_producto=nombre, defaults=defaults_producto)
                 if created:
                     productos_creados += 1
                     if stock_actual_val > 0:
-                        MovimientoInventario.objects.create(
-                            producto=producto,
-                            tipo_movimiento='entrada',
-                            cantidad=stock_actual_val
-                        )
+                        MovimientoInventario.objects.create(producto=producto, tipo_movimiento='entrada', cantidad=stock_actual_val)
                 else:
                     productos_actualizados += 1
             messages.success(request, f"✅ {productos_creados} nuevos, {productos_actualizados} actualizados.")
@@ -290,6 +290,7 @@ def carga_datos(request):
 
 
 # --- 7. AUDITOR ---
+
 @login_required
 @groups_required('Auditor')
 def auditor_home(request):
@@ -306,9 +307,25 @@ def auditor_usuarios(request):
     usuarios = User.objects.all().order_by('username')
     return render(request, 'auditor/auditor_usuarios.html', {'lista_usuarios': usuarios})
 
+
+# --- 8. INVENTARIO (GRUPO INVENTARIO) ---
+
 @login_required
-@groups_required('Auditor')
-def auditor_estadisticas(request):
-    context = _build_estadisticas_context(request)
-    context['base_template'] = 'auditor/base_auditor.html'   # <-- CAMBIO AQUÍ
-    return render(request, 'estadisticas.html', context)
+@groups_required('inventario')
+def inv_home(request):
+    return render(request, 'inv/home.html')
+
+@login_required
+@groups_required('inventario')
+def inv_perfil(request):
+    return render(request, 'inv/perfil.html')
+
+@login_required
+@groups_required('inventario')
+def inv_inventario(request):
+    return render(request, 'inv/inventario.html')
+
+@login_required
+@groups_required('inventario')
+def inv_carga_datos(request):
+    return render(request, 'inv/carga_datos.html')

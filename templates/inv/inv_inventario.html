@@ -1,0 +1,88 @@
+{% extends 'inv/base_inventario.html' %}
+
+{% load static %}
+
+{% block title %}Inventario - DataEasy{% endblock %}
+
+{% block styles %}
+    <style>
+        .stock-alerta { background-color: #fff3cd; color: #856404; font-weight: bold; }
+        .stock-critico { background-color: #f8d7da; color: #721c24; font-weight: bold; }
+    </style>
+{% endblock %}
+
+
+{% block content %}
+    <h2>📦 Inventario</h2>
+    <p>Gestiona todos los productos de tu inventario.</p>
+
+    <div class="toolbar">
+        <form method="GET" action="{% url 'inventario_lista' %}" class="search-form">
+            <input type="search" name="q" value="{{ search_query }}" placeholder="Buscar por producto, marca o categoría...">
+            <button type="submit">Buscar</button>
+        </form>
+        <div class="stats-box">
+            <span>Total Productos: <strong>{{ total_productos }}</strong></span>
+            <span>En Alerta: <strong class="stock-alerta">{{ total_alertas }}</strong></span>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th>Marca</th>
+                    <th>Stock Actual</th>
+                    <th>Stock Mínimo</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for producto in page_obj %}
+                <tr>
+                    <td>{{ producto.nombre_producto }}</td>
+                    <td>{{ producto.categoria.nombre_categoria|default:"N/A" }}</td>
+                    <td>{{ producto.marca.nombre_marca|default:"N/A" }}</td>
+                    
+                    {% if producto.stock_actual == 0 %}
+                        <td class="stock-critico">{{ producto.stock_actual }}</td>
+                    {% elif producto.en_alerta_stock %}
+                        <td class="stock-alerta">{{ producto.stock_actual }}</td>
+                    {% else %}
+                        <td>{{ producto.stock_actual }}</td>
+                    {% endif %}
+                    
+                    <td>{{ producto.stock_minimo }}</td>
+                    
+                    <td>
+                        <a href="{% url 'inventario_editar' producto.id %}" class="btn-edit">Editar</a>
+                        <a href="{% url 'inventario_eliminar' producto.id %}" class="btn-delete">Eliminar</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6">No se encontraron productos.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="pagination">
+        <span class="page-info">
+            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}.
+        </span>
+        <div class="page-links">
+            {% if page_obj.has_previous %}
+                <a href="?page=1&q={{ search_query }}">&laquo; Primera</a>
+                <a href="?page={{ page_obj.previous_page_number }}&q={{ search_query }}">Anterior</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}&q={{ search_query }}">Siguiente</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}&q={{ search_query }}">Última &raquo;</a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
