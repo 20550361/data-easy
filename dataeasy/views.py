@@ -52,7 +52,7 @@ def index(request):
             if user.groups.filter(name='Inventario').exists():
                 return redirect("inv_home")
 
-            return redirect("home")
+            return redirect("inv_home")
 
         else:
             messages.error(request, "Usuario o contraseña incorrectos")
@@ -313,19 +313,62 @@ def auditor_usuarios(request):
 @login_required
 @groups_required('inventario')
 def inv_home(request):
-    return render(request, 'inv/home.html')
+    return render(request, 'inv/inv_home.html')
 
 @login_required
 @groups_required('inventario')
 def inv_perfil(request):
-    return render(request, 'inv/perfil.html')
+    return render(request, 'inv/inv_perfil.html')
 
 @login_required
 @groups_required('inventario')
 def inv_inventario(request):
-    return render(request, 'inv/inventario.html')
+    return render(request, 'inv/inv_inventario.html')
 
 @login_required
 @groups_required('inventario')
 def inv_carga_datos(request):
-    return render(request, 'inv/carga_datos.html')
+    return render(request, 'inv/inv_carga_datos.html')
+
+# --- helper para armar el contexto de inventario (admin e inv) ---
+def _build_inventario_context(request):
+    query = request.GET.get('q', '')
+    if query:
+        productos_list = (Producto.objects
+            .filter(
+                Q(nombre_producto__icontains=query) |
+                Q(categoria__nombre_categoria__icontains=query) |
+                Q(marca__nombre_marca__icontains=query)
+            )
+            .select_related('categoria', 'marca')
+            .order_by('nombre_producto'))
+    else:
+        productos_list = (Producto.objects
+            .select_related('categoria', 'marca')
+            .all()
+            .order_by('nombre_producto'))
+
+    total_alertas = productos_list.filter(stock_actual__lte=F('stock_minimo')).count()
+    paginator = Paginator(productos_list, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return {
+        'page_obj': page_obj,
+        'total_alertas': total_alertas,
+        'search_query': query,
+        'total_productos': productos_list.count(),
+    }
+
+# --- ADMIN: usa el template normal ---
+@login_required
+def lista_inventario(request):
+    context = _build_inventario_context(request)
+    return render(request, 'inventario.html', context)
+
+# --- ROL INVENTARIO: usa su template en /templates/inv/ ---
+@login_required
+@groups_required('Inventario')
+def inv_inventario(request):
+    context = _build_inventario_context(request)
+    return render(request, 'inv/inv_inventario.html', context)

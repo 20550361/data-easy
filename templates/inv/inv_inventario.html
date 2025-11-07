@@ -1,5 +1,4 @@
 {% extends 'inv/base_inventario.html' %}
-
 {% load static %}
 
 {% block title %}Inventario - DataEasy{% endblock %}
@@ -11,13 +10,13 @@
     </style>
 {% endblock %}
 
-
 {% block content %}
     <h2>📦 Inventario</h2>
     <p>Gestiona todos los productos de tu inventario.</p>
 
     <div class="toolbar">
-        <form method="GET" action="{% url 'inventario_lista' %}" class="search-form">
+        {# IMPORTANTE: apunta a la ruta del rol Inventario #}
+        <form method="GET" action="{% url 'inv_inventario' %}" class="search-form">
             <input type="search" name="q" value="{{ search_query }}" placeholder="Buscar por producto, marca o categoría...">
             <button type="submit">Buscar</button>
         </form>
@@ -45,7 +44,7 @@
                     <td>{{ producto.nombre_producto }}</td>
                     <td>{{ producto.categoria.nombre_categoria|default:"N/A" }}</td>
                     <td>{{ producto.marca.nombre_marca|default:"N/A" }}</td>
-                    
+
                     {% if producto.stock_actual == 0 %}
                         <td class="stock-critico">{{ producto.stock_actual }}</td>
                     {% elif producto.en_alerta_stock %}
@@ -53,9 +52,9 @@
                     {% else %}
                         <td>{{ producto.stock_actual }}</td>
                     {% endif %}
-                    
+
                     <td>{{ producto.stock_minimo }}</td>
-                    
+
                     <td>
                         <a href="{% url 'inventario_editar' producto.id %}" class="btn-edit">Editar</a>
                         <a href="{% url 'inventario_eliminar' producto.id %}" class="btn-delete">Eliminar</a>
