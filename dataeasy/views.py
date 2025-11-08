@@ -16,20 +16,24 @@ from django.utils import timezone
 
 from django.contrib.auth.models import User
 from .models import Producto, Categoria, Marca, MovimientoInventario
-
+from django.contrib.auth.decorators import user_passes_test
 
 # --- 1.1 Helper de grupos ---
 def groups_required(*group_names, login_url='index'):
-    """Permite acceso a usuarios autenticados que pertenezcan a uno o más grupos."""
+    """Permite acceso si el usuario es superuser o pertenece (case-insensitive) a alguno de los grupos."""
+    # normaliza a minúsculas lo que se pide
+    wanted = {g.strip().lower() for g in group_names}
+
     def in_groups(u):
         if not u.is_authenticated:
             return False
         if u.is_superuser:
             return True
-        return u.groups.filter(name__in=group_names).exists()
+        # trae los grupos del usuario y compara en minúsculas
+        user_groups = set(g.name.strip().lower() for g in u.groups.all())
+        return bool(wanted & user_groups)
+
     return user_passes_test(in_groups, login_url=login_url)
-
-
 # --- 2. LOGIN Y PÁGINAS BÁSICAS 🌐 ---
 
 def index(request):
