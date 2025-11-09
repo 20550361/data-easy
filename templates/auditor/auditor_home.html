@@ -1,5 +1,4 @@
 {% extends 'auditor/base_auditor.html' %}
-
 {% load static %}
 
 {% block title %}Home Auditor - DataEasy{% endblock %}
@@ -35,12 +34,10 @@
     <ul>
       {% for prod in productos_bajo_stock %}
         <li>
-          <a href="{% url 'inventario_editar' prod.id %}">
-            {{ prod.nombre_producto }}
-            <span class="stock-level">
-              Quedan: {{ prod.stock_actual }} (Min: {{ prod.stock_minimo }})
-            </span>
-          </a>
+          {{ prod.nombre_producto }}
+          <span class="stock-level">
+            Quedan: {{ prod.stock_actual }} (Min: {{ prod.stock_minimo }})
+          </span>
         </li>
       {% empty %}
         <p>No hay productos en alerta.</p>

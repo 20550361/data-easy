@@ -34,6 +34,8 @@ urlpatterns = [
     path('auditor/perfil/', views.auditor_perfil, name='auditor_perfil'),
     path('auditor/usuarios/', views.auditor_usuarios, name='auditor_usuarios'),
     path('auditor/estadisticas/', views.auditor_estadisticas, name='auditor_estadisticas'),
+    path('auditor/carga-datos/', views.auditor_carga_datos, name='auditor_carga_datos'),
+
 
     # --- Rutas Rol Inventario ---
 
