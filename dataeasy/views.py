@@ -2,6 +2,7 @@
 
 # Python Standard Library
 import json
+import csv  # NUEVO (para exportar CSV en el paso 2)
 from datetime import datetime, timedelta
 
 # Third-Party Libraries
@@ -17,6 +18,7 @@ from django.core.paginator import Paginator
 from django.db.models import Sum, Count, F, Q
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
+from django.http import HttpResponse  # NUEVO
 
 # Django Models
 from django.contrib.auth.models import User
@@ -45,17 +47,74 @@ def index(request):
 @login_required
 def home(request):
     """ Vista Home / Dashboard """
+
+
+        # NUEVO: lee si el usuario pidió "solo alertas"
+    solo_alertas = request.GET.get('solo_alertas') == '1'  # NUEVO
+
+
     productos_bajo_stock = Producto.objects.filter(
         stock_actual__lt=F('stock_minimo')
     ).order_by('stock_actual')[:5]
     movimientos_recientes = MovimientoInventario.objects.select_related(
         'producto'
     ).order_by('-fecha_movimiento')[:5]
+       # NUEVO: queryset para la tabla estilo inventario (todas las filas)
+    productos_qs = Producto.objects.select_related('categoria', 'marca')
+    if solo_alertas:
+        # sólo los que están en alerta (<= mínimo) o sin stock
+        productos_qs = productos_qs.filter(
+            Q(stock_actual__lte=F('stock_minimo')) | Q(stock_actual=0)
+        )
+    productos = productos_qs.order_by('nombre_producto')  # NUEVO
+
     context = {
         'productos_bajo_stock': productos_bajo_stock,
         'movimientos_recientes': movimientos_recientes,
+        'productos': productos,                 # NUEVO (para la tabla)
+        'solo_alertas': solo_alertas,           # NUEVO (para marcar botón)
     }
     return render(request, 'home.html', context)
+
+#---------------------------------------
+@login_required
+def home_export_csv(request):
+    """
+    Exporta a CSV el mismo listado que ves en Home.
+    Respeta el filtro ?solo_alertas=1 si está activo.
+    """
+    solo_alertas = request.GET.get('solo_alertas') == '1'
+
+    qs = Producto.objects.select_related('categoria', 'marca')
+    if solo_alertas:
+        qs = qs.filter(Q(stock_actual__lte=F('stock_minimo')) | Q(stock_actual=0))
+    productos = qs.order_by('nombre_producto')
+
+    # Respuesta CSV (UTF-8 con BOM para abrir bien en Excel)
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="inventario.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Código', 'Nombre', 'Categoría', 'Marca', 'Stock Mín.', 'Stock Actual', 'Estado'])
+
+    for p in productos:
+        stock = p.stock_actual or 0
+        if stock == 0:
+            estado = 'Sin Stock'
+        elif stock <= p.stock_minimo:
+            estado = 'Stock Bajo'
+        else:
+            estado = 'Normal'
+        writer.writerow([
+            f'PRD-{p.id:04d}',
+            p.nombre_producto,
+            getattr(p.categoria, 'nombre_categoria', '') or '',
+            getattr(p.marca, 'nombre_marca', '') or '',
+            p.stock_minimo,
+            stock,
+            estado
+        ])
+    return response
+#---------------------------------
 
 @login_required
 def perfil(request):

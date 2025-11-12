@@ -17,7 +17,7 @@ urlpatterns = [
     path('inventario/', views.lista_inventario, name='inventario_lista'),
     path('inventario/editar/<int:id_producto>/', views.editar_producto, name='inventario_editar'),
     path('inventario/eliminar/<int:id_producto>/', views.eliminar_producto, name='inventario_eliminar'),
-
+    path('home/exportar-csv/', views.home_export_csv, name='home_export_csv'),  # NUEVO
     # --- Gestión de Usuarios ---
     path('usuarios/', views.lista_usuarios, name='lista_usuarios'),
     path('usuarios/crear/', views.crear_usuario, name='usuario_crear'),

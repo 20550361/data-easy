@@ -3,8 +3,9 @@
 
 {% block title %}Home - DataEasy{% endblock %}
 
-{% block styles %}
+{% block extra_styles %}
     <link rel="stylesheet" href="{% static 'css/home-style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/home.css' %}">
 {% endblock %}
 
 
@@ -48,4 +49,89 @@
             </ul>
         </div>
     </section>
-{% endblock %}
+
+
+<!-- ===================== NUEVO: BLOQUE INVENTARIO (estilo video) ===================== -->
+<section class="card inv-header">
+  <div class="title-wrap">
+    <h2>Control de Inventario</h2>
+    <p>Estado general de productos y existencias</p>
+  </div>
+
+  <div class="actions">
+    <!-- No cambiamos tu flujo: este “Actualizar Stock” simplemente recarga la página -->
+    <a href="{% url 'home' %}" class="btn btn-primary">Actualizar Stock</a>
+
+    <!-- Exportar CSV respeta ?solo_alertas=1 si está activo -->
+    <a href="{% url 'home_export_csv' %}{% if solo_alertas %}?solo_alertas=1{% endif %}" class="btn btn-success">
+      Exportar CSV
+    </a>
+
+    <!-- Botón conmutador: 'Solo alertas' / 'Ver todo' sin borrar nada -->
+    {% if solo_alertas %}
+      <a href="{% url 'home' %}" class="btn btn-warning">Ver Todo</a>
+    {% else %}
+      <a href="?solo_alertas=1" class="btn btn-warning">Solo Alertas</a>
+    {% endif %}
+  </div>
+</section>
+
+<section class="card inv-table">
+  <div class="subheader">
+    <h3>Stock Actual</h3>
+    <span class="muted">
+      {{ productos.count }} productos listados
+      {% if solo_alertas %} · mostrando <strong>solo alertas</strong>{% endif %}
+    </span>
+  </div>
+
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Nombre</th>
+          <th>Categoría</th>
+          <th>Marca</th>
+          <th>Stock Mín.</th>
+          <th>Stock Actual</th>
+          <th>Estado</th>
+          <th class="acciones">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in productos %}
+          {# Colores por estado: rojo = sin stock, amarillo = bajo, verde = normal #}
+          <tr class="
+            {% if p.stock_actual|default:0 == 0 %}row-danger
+            {% elif p.stock_actual|default:0 <= p.stock_minimo %}row-warning
+            {% else %}row-ok{% endif %}
+          >
+            <td class="code">PRD-{{ p.id|stringformat:"04d" }}</td>
+            <td class="name">{{ p.nombre_producto }}</td>
+            <td>{{ p.categoria.nombre_categoria|default:"—" }}</td>
+            <td>{{ p.marca.nombre_marca|default:"—" }}</td>
+            <td>{{ p.stock_minimo }}</td>
+            <td>{{ p.stock_actual|default:"0" }}</td>
+            <td>
+              {% if p.stock_actual|default:0 == 0 %}
+                <span class="badge danger">Sin Stock</span>
+              {% elif p.stock_actual|default:0 <= p.stock_minimo %}
+                <span class="badge warn">Stock Bajo</span>
+              {% else %}
+                <span class="badge ok">Normal</span>
+              {% endif %}
+            </td>
+            <td class="acciones">
+              <a class="btn btn-teal" href="{% url 'inventario_editar' p.id %}">Ver</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="8" class="empty">No hay productos para mostrar.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+<!-- =================== /NUEVO BLOQUE INVENTARIO =================== -->
+ {% endblock %}
