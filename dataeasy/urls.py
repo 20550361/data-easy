@@ -22,6 +22,8 @@ urlpatterns = [
     path('usuarios/', views.lista_usuarios, name='lista_usuarios'),
     path('usuarios/crear/', views.crear_usuario, name='usuario_crear'),
     path('usuarios/editar/<int:pk>/', views.editar_usuario, name='usuario_editar'),
+    path('usuarios/eliminar/<int:pk>/', views.eliminar_usuario, name='usuario_eliminar'),
+
     
     # --- Datos y Analíticas ---
     path('estadisticas/', views.estadisticas, name='estadisticas'),

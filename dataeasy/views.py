@@ -1,7 +1,6 @@
 # --- 1. IMPORTACIONES ---
 import json
 from datetime import datetime, timedelta
-
 import pandas as pd  # pip install pandas openpyxl
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -13,7 +12,6 @@ from django.core.paginator import Paginator
 from django.db.models import Sum, Count, F, Q
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
-
 from django.contrib.auth.models import User, Group
 
 from .models import Producto, Categoria, Marca, MovimientoInventario
@@ -22,10 +20,7 @@ from .forms import UserCreateForm, UserUpdateForm
 
 # --- 1.1 Helper de grupos (case-insensitive) ---
 def groups_required(*group_names, login_url='index'):
-    """
-    Permite acceso si el usuario es superuser o pertenece (case-insensitive)
-    a alguno de los grupos indicados en group_names.
-    """
+    """Permite acceso si el usuario es superuser o pertenece a alguno de los grupos indicados."""
     wanted = {g.strip().lower() for g in group_names}
 
     def in_groups(u):
@@ -74,18 +69,8 @@ def home(request):
     if request.user.groups.filter(name__iexact='Auditor').exists() and not request.user.is_superuser:
         return redirect('auditor_home')
 
-    productos_bajo_stock = (
-        Producto.objects.filter(stock_actual__lt=F('stock_minimo'))
-        .order_by('stock_actual')[:5]
-    )
-    movimientos_recientes = (
-        MovimientoInventario.objects.select_related('producto')
-        .order_by('-fecha_movimiento')[:5]
-    )
-    context = {
-        'productos_bajo_stock': productos_bajo_stock,
-        'movimientos_recientes': movimientos_recientes,
-    }
+    # ⬇️ Mismo contexto que estadísticas (gráficos, totales, filtros, listas)
+    context = _build_estadisticas_context(request)
     return render(request, 'home.html', context)
 
 
@@ -105,26 +90,20 @@ def recuperacion(request):
 
 # --- 3. INVENTARIO 📦 ---
 def _build_inventario_context(request):
-    """Contexto común para listados de inventario (admin y rol Inventario)."""
+    """Contexto común para listados de inventario (admin e Inventario)."""
     query = request.GET.get('q', '')
     if query:
         productos_list = (
-            Producto.objects
-            .filter(
-                Q(nombre_producto__icontains=query) |
-                Q(categoria__nombre_categoria__icontains=query) |
-                Q(marca__nombre_marca__icontains=query)
+            Producto.objects.filter(
+                Q(nombre_producto__icontains=query)
+                | Q(categoria__nombre_categoria__icontains=query)
+                | Q(marca__nombre_marca__icontains=query)
             )
             .select_related('categoria', 'marca')
             .order_by('nombre_producto')
         )
     else:
-        productos_list = (
-            Producto.objects
-            .select_related('categoria', 'marca')
-            .all()
-            .order_by('nombre_producto')
-        )
+        productos_list = Producto.objects.select_related('categoria', 'marca').all().order_by('nombre_producto')
 
     total_alertas = productos_list.filter(stock_actual__lte=F('stock_minimo')).count()
     paginator = Paginator(productos_list, 20)
@@ -139,7 +118,6 @@ def _build_inventario_context(request):
     }
 
 
-# --- Inventario (ADMIN) ---
 @login_required
 def lista_inventario(request):
     context = _build_inventario_context(request)
@@ -148,13 +126,11 @@ def lista_inventario(request):
 
 @login_required
 def editar_producto(request, id_producto):
-    # TODO: implementar edición
     return redirect('inventario_lista')
 
 
 @login_required
 def eliminar_producto(request, id_producto):
-    # TODO: implementar eliminación
     return redirect('inventario_lista')
 
 
@@ -166,12 +142,7 @@ def admin_required(view):
 @login_required
 @admin_required
 def lista_usuarios(request):
-    usuarios = (
-        User.objects.all()
-        .select_related()
-        .prefetch_related("groups")
-        .order_by('username')
-    )
+    usuarios = User.objects.all().select_related().prefetch_related("groups").order_by('username')
     return render(request, 'gestion_usuarios.html', {'lista_usuarios': usuarios})
 
 
@@ -187,11 +158,7 @@ def crear_usuario(request):
         messages.error(request, "❌ Revisa los errores del formulario.")
     else:
         form = UserCreateForm()
-    return render(request, 'usuario_form.html', {
-        'form': form,
-        'modo': 'crear',
-        'titulo': 'Crear usuario'
-    })
+    return render(request, 'usuario_form.html', {'form': form, 'modo': 'crear', 'titulo': 'Crear usuario'})
 
 
 @login_required
@@ -203,14 +170,10 @@ def editar_usuario(request, pk):
         form = UserUpdateForm(request.POST, instance=usuario)
         if form.is_valid():
             user = form.save()
-
-            # Mantener la sesión si el admin cambió su propia contraseña
             if user == request.user:
                 update_session_auth_hash(request, user)
-
             messages.success(request, "✅ Usuario actualizado correctamente.")
             return redirect('lista_usuarios')
-
         messages.error(request, "❌ Revisa los errores del formulario.")
     else:
         form = UserUpdateForm(instance=usuario, initial={
@@ -219,11 +182,27 @@ def editar_usuario(request, pk):
             "is_staff": usuario.is_staff,
         })
 
-    return render(request, 'usuario_form.html', {
-        'form': form,
-        'modo': 'editar',
-        'titulo': f'Editar usuario: {usuario.username}'
-    })
+    return render(request, 'usuario_form.html', {'form': form, 'modo': 'editar', 'titulo': f'Editar usuario: {usuario.username}'})
+
+
+@login_required
+@admin_required
+def eliminar_usuario(request, pk):
+    """Elimina un usuario (excepto superusuarios y el propio admin activo)."""
+    usuario = get_object_or_404(User, pk=pk)
+
+    if usuario.is_superuser:
+        messages.error(request, "❌ No puedes eliminar al superusuario.")
+        return redirect('lista_usuarios')
+
+    if usuario == request.user:
+        messages.error(request, "⚠️ No puedes eliminar tu propia cuenta mientras estás conectado.")
+        return redirect('lista_usuarios')
+
+    nombre = usuario.username
+    usuario.delete()
+    messages.success(request, f"🗑️ Usuario '{nombre}' eliminado correctamente.")
+    return redirect('lista_usuarios')
 
 
 # --- 5. DATOS Y ESTADÍSTICAS 📊 ---
@@ -242,7 +221,10 @@ def _build_estadisticas_context(request):
     stock_total = Producto.objects.aggregate(total_stock=Sum('stock_actual'))['total_stock'] or 0
     total_categorias = Categoria.objects.count()
     total_marcas = Marca.objects.count()
-    total_movimientos = MovimientoInventario.objects.count()
+
+    # 🔹 Total de movimientos dentro del rango
+    movimientos = MovimientoInventario.objects.filter(fecha_movimiento__date__range=[fecha_inicio, fecha_fin])
+    total_movimientos = movimientos.aggregate(total=Count('id'))['total'] or 0
 
     productos_bajo_stock = Producto.objects.filter(stock_actual__lt=F('stock_minimo')).order_by('stock_actual')
     productos_sin_stock = Producto.objects.filter(stock_actual=0)
@@ -258,18 +240,13 @@ def _build_estadisticas_context(request):
     ]
 
     stock_critico_marca_qs = (
-        Producto.objects
-        .filter(stock_actual__lt=F('stock_minimo'), marca__isnull=False)
+        Producto.objects.filter(stock_actual__lt=F('stock_minimo'), marca__isnull=False)
         .values('marca__nombre_marca')
         .annotate(cantidad=Count('id'))
         .order_by('-cantidad')
     )
-    stock_critico_marca = [
-        {'marca': r['marca__nombre_marca'], 'cantidad': r['cantidad']}
-        for r in stock_critico_marca_qs
-    ]
+    stock_critico_marca = [{'marca': r['marca__nombre_marca'], 'cantidad': r['cantidad']} for r in stock_critico_marca_qs]
 
-    movimientos = MovimientoInventario.objects.filter(fecha_movimiento__date__range=[fecha_inicio, fecha_fin])
     movimientos_por_mes = (
         movimientos.annotate(mes=TruncMonth('fecha_movimiento'))
         .values('mes', 'tipo_movimiento')
@@ -301,6 +278,7 @@ def _build_estadisticas_context(request):
         'stock_critico_marca_labels': [r['marca'] for r in stock_critico_marca],
         'stock_critico_marca_values': [r['cantidad'] for r in stock_critico_marca],
     }
+
     return {
         'total_productos': total_productos,
         'stock_total': stock_total,
@@ -315,7 +293,6 @@ def _build_estadisticas_context(request):
     }
 
 
-# Admin: estadísticas con base admin
 @login_required
 def estadisticas(request):
     context = _build_estadisticas_context(request)
@@ -377,60 +354,41 @@ def carga_datos(request):
 
     return render(request, 'carga_datos.html')
 
-# --- 7. AUDITOR (solo lectura) ---
-from django.db.models import F  # ya lo usas arriba; si no, deja este import
 
+# --- 7. AUDITOR (solo lectura) ---
 @login_required
 @groups_required('Auditor')
 def auditor_home(request):
-    # Contexto SOLO LECTURA (igual que admin, sin acciones)
-    productos_bajo_stock = (
-        Producto.objects.filter(stock_actual__lt=F('stock_minimo'))
-        .order_by('stock_actual')[:5]
-    )
-    movimientos_recientes = (
-        MovimientoInventario.objects.select_related('producto')
-        .order_by('-fecha_movimiento')[:5]
-    )
-    context = {
-        'productos_bajo_stock': productos_bajo_stock,
-        'movimientos_recientes': movimientos_recientes,
-    }
+    productos_bajo_stock = Producto.objects.filter(stock_actual__lt=F('stock_minimo')).order_by('stock_actual')[:5]
+    movimientos_recientes = MovimientoInventario.objects.select_related('producto').order_by('-fecha_movimiento')[:5]
+    context = {'productos_bajo_stock': productos_bajo_stock, 'movimientos_recientes': movimientos_recientes}
     return render(request, 'auditor/auditor_home.html', context)
 
 
 @login_required
 @groups_required('Auditor')
 def auditor_perfil(request):
-    # Perfil visual, sin edición de servidor (tu template guarda en localStorage)
     return render(request, 'auditor/auditor_perfil.html')
 
 
 @login_required
 @groups_required('Auditor')
 def auditor_usuarios(request):
-    # SOLO LECTURA: listado simple, sin formularios ni POST
-    usuarios = (
-        User.objects.all()
-        .select_related()
-        .prefetch_related('groups')
-        .order_by('username')
-    )
+    usuarios = User.objects.all().select_related().prefetch_related('groups').order_by('username')
     return render(request, 'auditor/auditor_usuarios.html', {'lista_usuarios': usuarios})
 
 
 @login_required
 @groups_required('Auditor')
 def auditor_estadisticas(request):
-    # Reutiliza tu builder y fuerza el layout de auditor
     context = _build_estadisticas_context(request)
-    context['base_template'] = 'auditor/base_auditor.html'  # <- el template lo extiende dinámicamente
+    context['base_template'] = 'auditor/base_auditor.html'
     return render(request, 'auditor/auditor_estadisticas.html', context)
+
 
 @login_required
 @groups_required('Auditor')
 def auditor_carga_datos(request):
-    # Solo muestra instrucciones; sin POST ni lógica de escritura
     return render(request, 'auditor/auditor_carga_datos.html')
 
 
@@ -457,7 +415,4 @@ def inv_inventario(request):
 @login_required
 @groups_required('Inventario')
 def inv_carga_datos(request):
-    # Si quieres que el rol Inventario cargue datos con la misma lógica del admin,
-    # podrías reutilizar la vista de arriba, pero renderizando otro template.
-    # Por ahora sólo renderiza el template del área Inventario.
     return render(request, 'inv/inv_carga_datos.html')

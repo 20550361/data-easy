@@ -52,9 +52,6 @@
                 <a href="{% url 'inventario_lista' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'inventario_lista' %}active{% endif %}">
                     📦 Inventario
                 </a>
-                <a href="{% url 'estadisticas' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'estadisticas' %}active{% endif %}">
-                    📊 Estadísticas
-                </a>
                 <a href="{% url 'lista_usuarios' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'lista_usuarios' %}active{% endif %}">
                     👥 Gestión de usuarios
                 </a>
