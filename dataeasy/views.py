@@ -13,6 +13,7 @@ from django.db.models import Sum, Count, F, Q
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from django.contrib.auth.models import User, Group
+from django.http import HttpResponse
 
 from .models import Producto, Categoria, Marca, MovimientoInventario
 from .forms import UserCreateForm, UserUpdateForm
@@ -120,18 +121,135 @@ def _build_inventario_context(request):
 
 @login_required
 def lista_inventario(request):
-    context = _build_inventario_context(request)
-    return render(request, 'inventario.html', context)
+    query = request.GET.get('q', '').strip()
+    solo_alertas = request.GET.get('solo_alertas') == '1'
 
+    productos = Producto.objects.select_related('categoria', 'marca').all()
+
+    # Filtrar por búsqueda
+    if query:
+        productos = productos.filter(
+            Q(nombre_producto__icontains=query) |
+            Q(marca__nombre_marca__icontains=query) |
+            Q(categoria__nombre_categoria__icontains=query)
+        )
+
+    # Filtrar por productos en alerta
+    if solo_alertas:
+        productos = productos.filter(
+            Q(stock_actual=0) | Q(stock_actual__lte=F('stock_minimo'))
+        )
+
+    productos = productos.order_by('nombre_producto')
+
+    # Paginación como ya tienes
+    paginator = Paginator(productos, 15)
+    page = request.GET.get('page')
+    page_obj = paginator.get_page(page)
+
+    context = {
+        'page_obj': page_obj,
+        'search_query': query,
+        'solo_alertas': solo_alertas,
+        'total_productos': Producto.objects.count(),
+        'total_alertas': Producto.objects.filter(
+            Q(stock_actual=0) | Q(stock_actual__lte=F('stock_minimo'))
+        ).count(),
+        'categorias': Categoria.objects.all(),
+        'marcas': Marca.objects.all(),
+    }
+
+    return render(request, 'inventario.html', context)
 
 @login_required
 def editar_producto(request, id_producto):
+    """Editar un producto existente (llamado desde el modal)."""
+    producto = get_object_or_404(Producto, id=id_producto)
+
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre_producto', '').strip()
+        categoria_id = request.POST.get('categoria')
+        marca_id = request.POST.get('marca')
+        stock_actual = request.POST.get('stock_actual') or 0
+        stock_minimo = request.POST.get('stock_minimo') or 0
+        descripcion = request.POST.get('descripcion') or ''
+
+        if not nombre:
+            messages.error(request, "El nombre del producto es obligatorio.")
+        else:
+            try:
+                categoria = Categoria.objects.filter(id=categoria_id).first() if categoria_id else None
+                marca = Marca.objects.filter(id=marca_id).first() if marca_id else None
+
+                producto.nombre_producto = nombre
+                producto.descripcion = descripcion
+                producto.categoria = categoria
+                producto.marca = marca
+                producto.stock_actual = int(stock_actual)
+                producto.stock_minimo = int(stock_minimo)
+                producto.save()
+
+                messages.success(request, f"Producto «{producto.nombre_producto}» actualizado correctamente.")
+            except Exception as e:
+                messages.error(request, f"Error al actualizar el producto: {e}")
+
+    # Siempre volvemos al inventario (GET o POST)
     return redirect('inventario_lista')
 
 
 @login_required
 def eliminar_producto(request, id_producto):
+    """Eliminar un producto (confirmado desde el modal)."""
+    producto = get_object_or_404(Producto, id=id_producto)
+
+    if request.method == 'POST':
+        nombre = producto.nombre_producto
+        producto.delete()
+        messages.success(request, f"Producto «{nombre}» eliminado correctamente.")
+
+    # GET o POST: volvemos al inventario
     return redirect('inventario_lista')
+
+@login_required
+def crear_producto(request):
+    """Crear un nuevo producto y guardarlo en la base de datos."""
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre_producto', '').strip()
+        categoria_id = request.POST.get('categoria')
+        marca_id = request.POST.get('marca')
+        stock_actual = request.POST.get('stock_actual') or 0
+        stock_minimo = request.POST.get('stock_minimo') or 0
+        descripcion = request.POST.get('descripcion') or ''
+
+        # Validación básica
+        if not nombre:
+            messages.error(request, "El nombre del producto es obligatorio.")
+        else:
+            try:
+                categoria = Categoria.objects.filter(id=categoria_id).first() if categoria_id else None
+                marca = Marca.objects.filter(id=marca_id).first() if marca_id else None
+
+                producto = Producto.objects.create(
+                    nombre_producto=nombre,
+                    descripcion=descripcion,
+                    categoria=categoria,
+                    marca=marca,
+                    stock_actual=int(stock_actual),
+                    stock_minimo=int(stock_minimo),
+                )
+                messages.success(request, f"Producto «{producto.nombre_producto}» creado correctamente.")
+                return redirect('inventario_lista')
+            except Exception as e:
+                messages.error(request, f"Error al crear el producto: {e}")
+
+    # Si es GET, o hubo error, devolvemos contexto (útil si algún día usas página propia)
+    context = {
+        'categorias': Categoria.objects.all().order_by('nombre_categoria'),
+        'marcas': Marca.objects.all().order_by('nombre_marca'),
+    }
+    return render(request, 'inventario_form.html', context)
+
+
 
 
 # --- 4. USUARIOS (solo Admin) 👥 ---
@@ -416,3 +534,54 @@ def inv_inventario(request):
 @groups_required('Inventario')
 def inv_carga_datos(request):
     return render(request, 'inv/inv_carga_datos.html')
+
+
+@login_required
+def exportar_excel(request):
+    """Exporta el inventario completo (o filtrado) a un archivo Excel."""
+     # Obtener productos (los mismos que se muestran en pantalla)
+    productos = Producto.objects.select_related('categoria', 'marca').all()
+
+    # Detectar filtro "solo alertas"
+    solo_alertas = request.GET.get('solo_alertas') == '1'
+    if solo_alertas:
+        productos = productos.filter(
+            Q(stock_actual=0) | Q(stock_actual__lte=F('stock_minimo'))
+        )
+
+    # Detectar búsqueda
+    query = request.GET.get('q', '')
+    if query:
+        productos = productos.filter(
+            Q(nombre_producto__icontains=query) |
+            Q(marca__nombre_marca__icontains=query) |
+            Q(categoria__nombre_categoria__icontains=query)
+        )
+    
+    # Convertir a DataFrame
+    data = []
+    for p in productos:
+        data.append({
+            "Producto": p.nombre_producto,
+            "Categoría": p.categoria.nombre_categoria if p.categoria else "N/A",
+            "Marca": p.marca.nombre_marca if p.marca else "N/A",
+            "Stock actual": p.stock_actual,
+            "Stock mínimo": p.stock_minimo,
+            "Estado": (
+                "Sin stock" if p.stock_actual == 0 else
+                "Stock bajo" if p.stock_actual <= p.stock_minimo else
+                "Normal"
+            )
+        })
+
+    df = pd.DataFrame(data)
+
+    # Preparar archivo
+    response = HttpResponse(
+        content_type='application/vnd.ms-excel'
+    )
+    response['Content-Disposition'] = 'attachment; filename="inventario.xlsx"'
+
+    df.to_excel(response, index=False)
+
+    return response
