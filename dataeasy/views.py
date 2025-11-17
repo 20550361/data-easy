@@ -20,6 +20,7 @@ from .models import Producto, Categoria, Marca, MovimientoInventario
 from .forms import UserCreateForm, UserUpdateForm
 
 
+
 # --- 1.1 Helper de grupos (case-insensitive) ---
 def groups_required(*group_names, login_url='index'):
     """Permite acceso si el usuario es superuser o pertenece a alguno de los grupos indicados."""
@@ -162,6 +163,9 @@ def lista_inventario(request):
     paginator = Paginator(productos.order_by('nombre_producto'), 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+    todas_categorias = Categoria.objects.all().order_by('nombre_categoria')
+    todas_marcas = Marca.objects.all().order_by('nombre_marca')
+    
 
     context = {
         'page_obj': page_obj,
@@ -180,6 +184,8 @@ def lista_inventario(request):
 
         # si usas categoría seleccionada en algún filtro visual
         'categoria_seleccionada': categoria_id,
+        'categorias': todas_categorias,
+        'marcas': todas_marcas,
     }
 
     return render(request, 'inventario.html', context)
