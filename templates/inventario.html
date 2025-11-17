@@ -324,25 +324,37 @@
             <textarea name="descripcion" class="form-control" rows="2"></textarea>
           </div>
 
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Categoría</label>
-              <select name="categoria" class="form-select">
-                <option value="">Sin categoría</option>
-                {% for c in categorias %}
-                  <option value="{{ c.id }}">{{ c.nombre_categoria }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Marca</label>
-              <select name="marca" class="form-select">
-                <option value="">Sin marca</option>
-                {% for m in marcas %}
-                  <option value="{{ m.id }}">{{ m.nombre_marca }}</option>
-                {% endfor %}
-              </select>
-            </div>
+<div class="row g-3 mb-3">
+
+    <div class="col-md-6">
+        <label for="edit-categoria" class="form-label">Categoría</label>
+        <select name="categoria" id="edit-categoria" class="form-select">
+            
+            <option value="" {% if not producto.categoria %}selected{% endif %}>
+                Sin categoría
+            </option>
+            
+            {% for c in categorias %}
+                <option value="{{ c.id }}" {% if producto.categoria and producto.categoria.id == c.id %}selected{% endif %}>
+                    {{ c.nombre_categoria }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="col-md-6">
+        <label for="edit-marca" class="form-label">Marca</label>
+        <select name="marca" id="edit-marca" class="form-select">
+
+            <option value="" {% if not producto.marca %}selected{% endif %}>Sin marca</option>
+
+            {% for m in marcas %}
+                <option value="{{ m.id }}" {% if producto.marca and producto.marca.id == m.id %}selected{% endif %}>
+                    {{ m.nombre_marca }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
           </div>
 
           <div class="row g-3 mt-1">
