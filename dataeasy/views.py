@@ -1,7 +1,7 @@
 # --- 1. IMPORTACIONES ---
 import json
 from datetime import datetime, timedelta
-import pandas as pd  # pip install pandas openpyxl
+import pandas as pd  # pip install pandas openpyxl3
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
@@ -119,47 +119,74 @@ def _build_inventario_context(request):
     }
 
 
+
+
+
+
 @login_required
 def lista_inventario(request):
     query = request.GET.get('q', '').strip()
     solo_alertas = request.GET.get('solo_alertas') == '1'
+    categoria_id = request.GET.get('categoria')
 
-    productos = Producto.objects.select_related('categoria', 'marca').all()
+    # queryset para la tabla (con filtros)
+    productos = Producto.objects.select_related('categoria', 'marca')
 
-    # Filtrar por búsqueda
     if query:
         productos = productos.filter(
             Q(nombre_producto__icontains=query) |
-            Q(marca__nombre_marca__icontains=query) |
-            Q(categoria__nombre_categoria__icontains=query)
+            Q(categoria__nombre_categoria__icontains=query) |
+            Q(marca__nombre_marca__icontains=query)
         )
 
-    # Filtrar por productos en alerta
+    if categoria_id:
+        productos = productos.filter(categoria_id=categoria_id)
+
     if solo_alertas:
         productos = productos.filter(
-            Q(stock_actual=0) | Q(stock_actual__lte=F('stock_minimo'))
+            Q(stock_actual__lte=0) |
+            Q(stock_actual__gt=0, stock_actual__lte=F('stock_minimo'))
         )
 
-    productos = productos.order_by('nombre_producto')
+    # 🔹 ALERTAS “EN TIEMPO REAL” (no usan los filtros de búsqueda)
+    alertas_qs = Producto.objects.select_related('categoria', 'marca').filter(
+        Q(stock_actual__lte=0) |
+        Q(stock_actual__gt=0, stock_actual__lte=F('stock_minimo'))
+    )
 
-    # Paginación como ya tienes
-    paginator = Paginator(productos, 15)
-    page = request.GET.get('page')
-    page_obj = paginator.get_page(page)
+    sin_stock_qs = alertas_qs.filter(stock_actual__lte=0)
+    bajo_stock_qs = alertas_qs.filter(stock_actual__gt=0)
+
+    # paginación de la tabla
+    paginator = Paginator(productos.order_by('nombre_producto'), 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
 
     context = {
         'page_obj': page_obj,
         'search_query': query,
         'solo_alertas': solo_alertas,
+
+        # tarjetas de arriba
         'total_productos': Producto.objects.count(),
-        'total_alertas': Producto.objects.filter(
-            Q(stock_actual=0) | Q(stock_actual__lte=F('stock_minimo'))
-        ).count(),
-        'categorias': Categoria.objects.all(),
-        'marcas': Marca.objects.all(),
+        'total_alertas': alertas_qs.count(),
+        'sin_stock': sin_stock_qs.count(),
+        'bajo_stock': bajo_stock_qs.count(),
+
+        # listas para el modal
+        'sin_stock_items': sin_stock_qs,
+        'bajo_stock_items': bajo_stock_qs,
+
+        # si usas categoría seleccionada en algún filtro visual
+        'categoria_seleccionada': categoria_id,
     }
 
     return render(request, 'inventario.html', context)
+
+
+
+
+
 
 @login_required
 def editar_producto(request, id_producto):

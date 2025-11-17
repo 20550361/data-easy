@@ -452,6 +452,88 @@
       });
     });
   </script>
+  {% if total_alertas > 0 %}
+    <!-- MODAL DE ALERTAS DE INVENTARIO -->
+    <div class="modal fade" id="alertaInventarioModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <!-- Cabecera: rojo si hay sin stock, amarilla si solo hay bajo stock -->
+                <div class="modal-header {% if sin_stock > 0 %}bg-danger text-white{% else %}bg-warning{% endif %}">
+                    <h5 class="modal-title mb-0">
+                        {% if sin_stock > 0 %}
+                            ⚠ Productos sin stock y en alerta
+                        {% else %}
+                            ⚠ Productos con stock bajo
+                        {% endif %}
+                    </h5>
+                </div>
+
+              <div class="modal-body">
+
+    {% if sin_stock > 0 %}
+        <h6 class="mb-2">🔴 Productos sin stock</h6>
+        <ul class="mb-3">
+            {% for p in sin_stock_items %}
+                <li>
+                    <strong>{{ p.nombre_producto }}</strong>
+                    <span class="text-muted">
+                        — {{ p.categoria.nombre_categoria|default:"N/A" }}
+                    </span>
+                    (stock: {{ p.stock_actual }})
+                </li>
+            {% endfor %}
+        </ul>
+        <hr>
+    {% endif %}
+{% if bajo_stock > 0 %}
+    <h6 class="mb-2">🟡 Productos con stock bajo</h6>
+    <ul>
+        {% for p in bajo_stock_items %}
+            <li>
+                <strong>{{ p.nombre_producto }}</strong>
+                <span class="text-muted">
+                    –
+                    {% if p.categoria %}
+                        {{ p.categoria.nombre_categoria }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </span>
+                ({{ p.stock_actual }} / {{ p.stock_minimo }})
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}
+
+    {% if sin_stock == 0 and bajo_stock == 0 %}
+        <p class="mb-0 text-muted">
+            No hay productos en alerta. 🎉
+        </p>
+    {% endif %}
+
+</div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT: mostrar el modal automáticamente y cerrarlo después de unos segundos -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var modalEl = document.getElementById('alertaInventarioModal');
+            if (!modalEl) return;
+
+            // Requiere Bootstrap 5 (bootstrap.bundle.js ya cargado en base.html)
+            var alertaModal = new bootstrap.Modal(modalEl);
+            alertaModal.show();
+
+            // Cierre automático a los 6 segundos
+            setTimeout(function () {
+                alertaModal.hide();
+            }, 6000);
+        });
+    </script>
+{% endif %}
 {% endblock %}
 
 
