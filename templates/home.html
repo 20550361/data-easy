@@ -1,137 +1,196 @@
 {% extends 'base.html' %}
+
 {% load static %}
 
-{% block title %}Home - DataEasy{% endblock %}
+{% block title %}Estadísticas - DataEasy{% endblock %}
 
-{% block extra_styles %}
-    <link rel="stylesheet" href="{% static 'css/home-style.css' %}">
-    <link rel="stylesheet" href="{% static 'css/home.css' %}">
+{% block styles %}
+    {# Link to the specific CSS for this page #}
+    <link rel="stylesheet" href="{% static 'css/estadisticas.css' %}">
 {% endblock %}
 
 
 {% block content %}
-    <section class="welcome-banner">
-        <h2>Bienvenido, {{ user.username }}</h2>
-        <p>Este es tu panel principal en DataEasy</p>
+    <h2>📊 Estadísticas del Inventario</h2>
+    <p>Visualiza el rendimiento y estado de tu inventario.</p>
+
+    <form method="GET" class="date-filter-form">
+        <label for="fecha_inicio">Desde:</label>
+        <input type="date" id="fecha_inicio" name="fecha_inicio" value="{{ fecha_inicio|date:'Y-m-d' }}">
+        
+        <label for="fecha_fin">Hasta:</label>
+        <input type="date" id="fecha_fin" name="fecha_fin" value="{{ fecha_fin|date:'Y-m-d' }}">
+        
+        <button type="submit">🔍 Filtrar</button>
+    </form>
+
+    <section class="stats-summary">
+        <div class="stat-card">
+            <h3>Total Productos</h3>
+            <div class="value">{{ total_productos }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Stock Total (Unidades)</h3>
+            <div class="value">{{ stock_total|default:"0" }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Total Categorías</h3>
+            <div class="value">{{ total_categorias }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Total Marcas</h3>
+            <div class="value">{{ total_marcas }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Total Movimientos (Rango)</h3>
+            <div class="value">{{ total_movimientos }}</div> {# Assuming total_movimientos is passed #}
+        </div>
     </section>
 
-    <section class="dashboard-panels">
-        <div class="recent-items">
-            <h3>Últimos movimientos</h3>
-            <ul>
-                {% for mov in movimientos_recientes %}
-                    <li>
-                        <strong>{{ mov.tipo_movimiento|capfirst }}</strong>: 
-                        {{ mov.cantidad }} x {{ mov.producto.nombre_producto }}
-                        <span class="fecha">{{ mov.fecha_movimiento|date:"d M Y" }}</span>
-                    </li>
-                {% empty %}
-                    <p>No hay movimientos recientes.</p>
-                {% endfor %}
-            </ul>
+    <section class="charts-grid">
+        <div class="chart-container">
+            <h3>Movimientos por Mes</h3>
+            <canvas id="movimientosMesChart"></canvas>
         </div>
+        <div class="chart-container">
+            <h3>Stock por Categoría</h3>
+            <canvas id="stockCategoriaChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>Marcas con Stock Crítico</h3>
+            <canvas id="stockCriticoMarcaChart"></canvas>
+        </div>
+    </section>
 
-        <div class="low-stock">
-            <h3>⚠️ Artículos con bajo stock</h3>
+    <section class="low-stock-lists">
+        <div class="stock-list-container">
+            <h3>⚠️ Productos Bajo Stock Mínimo</h3>
             <ul>
                 {% for prod in productos_bajo_stock %}
-                    <li>
-                        <a href="{% url 'inventario_editar' prod.id %}"> 
-                            {{ prod.nombre_producto }}
-                            <span class="stock-level">
-                                Quedan: {{ prod.stock_actual }} (Min: {{ prod.stock_minimo }})
-                            </span>
-                        </a>
-                    </li>
+                <li>
+                    <a href="{% url 'inventario_editar' prod.id %}">{{ prod.nombre_producto }}</a>
+                    <span class="stock-level">({{ prod.stock_actual }}/{{ prod.stock_minimo }})</span>
+                </li>
                 {% empty %}
-                    <p>No hay productos en alerta.</p>
+                <li>No hay productos bajo el mínimo.</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="stock-list-container">
+            <h3>🚫 Productos Sin Stock</h3>
+            <ul>
+                {% for prod in productos_sin_stock %}
+                <li>
+                    <a href="{% url 'inventario_editar' prod.id %}">{{ prod.nombre_producto }}</a>
+                </li>
+                {% empty %}
+                <li>No hay productos sin stock.</li>
                 {% endfor %}
             </ul>
         </div>
     </section>
 
+{% endblock %}
 
-<!-- ===================== NUEVO: BLOQUE INVENTARIO (estilo video) ===================== -->
-<section class="card inv-header">
-  <div class="title-wrap">
-    <h2>Control de Inventario</h2>
-    <p>Estado general de productos y existencias</p>
-  </div>
 
-  <div class="actions">
-    <!-- No cambiamos tu flujo: este “Actualizar Stock” simplemente recarga la página -->
-    <a href="{% url 'home' %}" class="btn btn-primary">Actualizar Stock</a>
+{% block scripts %}
+    {# Include Chart.js library (CDN) #}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Exportar CSV respeta ?solo_alertas=1 si está activo -->
-    <a href="{% url 'home_export_csv' %}{% if solo_alertas %}?solo_alertas=1{% endif %}" class="btn btn-success">
-      Exportar CSV
-    </a>
+    <script>
+        // Get the data passed from the Django view
+        const chartData = JSON.parse('{{ chart_data_json|escapejs }}');
 
-    <!-- Botón conmutador: 'Solo alertas' / 'Ver todo' sin borrar nada -->
-    {% if solo_alertas %}
-      <a href="{% url 'home' %}" class="btn btn-warning">Ver Todo</a>
-    {% else %}
-      <a href="?solo_alertas=1" class="btn btn-warning">Solo Alertas</a>
-    {% endif %}
-  </div>
-</section>
+        // --- Configuration Helper ---
+        const commonChartOptions = {
+            responsive: true,
+            maintainAspectRatio: false // Key for fitting in fixed containers
+        };
 
-<section class="card inv-table">
-  <div class="subheader">
-    <h3>Stock Actual</h3>
-    <span class="muted">
-      {{ productos.count }} productos listados
-      {% if solo_alertas %} · mostrando <strong>solo alertas</strong>{% endif %}
-    </span>
-  </div>
+        // --- 1. Movimientos por Mes (Line Chart) ---
+        const ctxMovimientos = document.getElementById('movimientosMesChart')?.getContext('2d');
+        if (ctxMovimientos && chartData.meses) { // Added check for chartData.meses
+            new Chart(ctxMovimientos, {
+                type: 'line',
+                data: {
+                    labels: chartData.meses,
+                    datasets: [{
+                        label: 'Entradas',
+                        data: chartData.entradas,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1,
+                        fill: false
+                    }, {
+                        label: 'Salidas',
+                        data: chartData.salidas,
+                        borderColor: 'rgb(255, 99, 132)',
+                        tension: 0.1,
+                        fill: false
+                    }]
+                },
+                options: {
+                    ...commonChartOptions,
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        } else {
+             console.error("Could not find canvas for Movimientos chart or data is missing.");
+        }
 
-  <div class="table-responsive">
-    <table>
-      <thead>
-        <tr>
-          <th>Código</th>
-          <th>Nombre</th>
-          <th>Categoría</th>
-          <th>Marca</th>
-          <th>Stock Mín.</th>
-          <th>Stock Actual</th>
-          <th>Estado</th>
-          <th class="acciones">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for p in productos %}
-          {# Colores por estado: rojo = sin stock, amarillo = bajo, verde = normal #}
-          <tr class="
-            {% if p.stock_actual|default:0 == 0 %}row-danger
-            {% elif p.stock_actual|default:0 <= p.stock_minimo %}row-warning
-            {% else %}row-ok{% endif %}
-          >
-            <td class="code">PRD-{{ p.id|stringformat:"04d" }}</td>
-            <td class="name">{{ p.nombre_producto }}</td>
-            <td>{{ p.categoria.nombre_categoria|default:"—" }}</td>
-            <td>{{ p.marca.nombre_marca|default:"—" }}</td>
-            <td>{{ p.stock_minimo }}</td>
-            <td>{{ p.stock_actual|default:"0" }}</td>
-            <td>
-              {% if p.stock_actual|default:0 == 0 %}
-                <span class="badge danger">Sin Stock</span>
-              {% elif p.stock_actual|default:0 <= p.stock_minimo %}
-                <span class="badge warn">Stock Bajo</span>
-              {% else %}
-                <span class="badge ok">Normal</span>
-              {% endif %}
-            </td>
-            <td class="acciones">
-              <a class="btn btn-teal" href="{% url 'inventario_editar' p.id %}">Ver</a>
-            </td>
-          </tr>
-        {% empty %}
-          <tr><td colspan="8" class="empty">No hay productos para mostrar.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
-<!-- =================== /NUEVO BLOQUE INVENTARIO =================== -->
- {% endblock %}
+
+        // --- 2. Stock por Categoría (Pie Chart) ---
+        const ctxStockCat = document.getElementById('stockCategoriaChart')?.getContext('2d');
+         if (ctxStockCat && chartData.stock_por_categoria_labels) { // Added check for data
+            new Chart(ctxStockCat, {
+                type: 'pie',
+                data: {
+                    labels: chartData.stock_por_categoria_labels,
+                    datasets: [{
+                        label: 'Unidades en Stock',
+                        data: chartData.stock_por_categoria_values,
+                        backgroundColor: [
+                            '#3498DB', '#E74C3C', '#9B59B6', '#F1C40F', '#2ECC71',
+                            '#1ABC9C', '#E67E22', '#BDC3C7', '#7F8C8D', '#34495E'
+                        ],
+                        hoverOffset: 4
+                    }]
+                },
+                options: { ...commonChartOptions }
+            });
+        } else {
+            console.error("Could not find canvas for Stock Categoria chart or data is missing.");
+        }
+
+        // --- 3. Marcas con Stock Crítico (Bar Chart) ---
+        const ctxStockCritico = document.getElementById('stockCriticoMarcaChart')?.getContext('2d');
+        if (ctxStockCritico && chartData.stock_critico_marca_labels) { // Added check for data
+            new Chart(ctxStockCritico, {
+                type: 'bar',
+                data: {
+                    labels: chartData.stock_critico_marca_labels,
+                    datasets: [{
+                        label: 'Nº Productos Críticos',
+                        data: chartData.stock_critico_marca_values,
+                        backgroundColor: 'rgba(230, 126, 34, 0.6)',
+                        borderColor: 'rgba(230, 126, 34, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    ...commonChartOptions,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+        } else {
+             console.error("Could not find canvas for Stock Critico chart or data is missing.");
+        }
+    </script>
+{% endblock %}

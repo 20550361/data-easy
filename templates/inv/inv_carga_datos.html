@@ -1,0 +1,35 @@
+{% extends 'inv/base_inventario.html' %}
+
+{% load static %}
+
+{% block title %}Carga Masiva de Datos - DataEasy{% endblock %}
+
+{% block styles %}
+    {# Link to the new external CSS file #}
+    <link rel="stylesheet" href="{% static 'css/carga_datos.css' %}">
+{% endblock %}
+
+
+{% block content %}
+    <h2>📁 Carga Masiva de Datos</h2>
+    <p>Sube un archivo Excel (.xlsx o .xls) para registrar o actualizar productos en el inventario.</p>
+    <p><small>Columnas esperadas: `nombre_producto`, `categoria`, `marca`, `descripcion`, `stock_actual` (solo para nuevos), `stock_minimo`.</small></p>
+
+    <form method="post" enctype="multipart/form-data" class="upload-form">
+        {% csrf_token %}
+        
+        <label for="archivo_excel">Selecciona el archivo Excel:</label>
+        <input type="file" name="archivo_excel" id="archivo_excel" accept=".xlsx, .xls" required>
+        
+        <button type="submit">⬆️ Cargar Archivo</button>
+    </form>
+
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+{% endblock %}

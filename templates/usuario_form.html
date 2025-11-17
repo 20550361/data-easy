@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ titulo }} - DataEasy{% endblock %}
+
+{% block content %}
+  <h2>👥 {{ titulo }}</h2>
+
+  <form method="post" class="form-vertical">
+    {% csrf_token %}
+    <div class="form-grid">
+
+      {# Campos principales #}
+      <div class="card">
+        <h3>Datos básicos</h3>
+        <div class="field">{{ form.username.label_tag }} {{ form.username }}</div>
+        <div class="field">{{ form.email.label_tag }} {{ form.email }}</div>
+        <div class="field">{{ form.first_name.label_tag }} {{ form.first_name }}</div>
+        <div class="field">{{ form.last_name.label_tag }} {{ form.last_name }}</div>
+      </div>
+
+      {# Contraseña (solo crear) #}
+      {% if form.password1 %}
+      <div class="card">
+        <h3>Contraseña</h3>
+        <div class="field">{{ form.password1.label_tag }} {{ form.password1 }}</div>
+        <div class="field">{{ form.password2.label_tag }} {{ form.password2 }}</div>
+      </div>
+      {% endif %}
+
+      {# Cambiar contraseña (editar) #}
+      {% if form.new_password1 %}
+      <div class="card">
+        <h3>Cambiar contraseña</h3>
+        <div class="field">{{ form.new_password1.label_tag }} {{ form.new_password1 }}</div>
+        <div class="field">{{ form.new_password2.label_tag }} {{ form.new_password2 }}</div>
+      </div>
+      {% endif %}
+
+      <div class="card">
+        <h3>Permisos</h3>
+        <div class="field">{{ form.is_active }} {{ form.is_active.label_tag }}</div>
+        <div class="field">{{ form.is_staff }} {{ form.is_staff.label_tag }}</div>
+        {# Si habilitas superusuario en forms, muéstralo aquí #}
+        {# <div class="field">{{ form.is_superuser }} {{ form.is_superuser.label_tag }}</div> #}
+      </div>
+
+      <div class="card">
+        <h3>Grupos</h3>
+        <div class="field">
+          {{ form.groups }}
+          <p style="font-size:.9em;color:#666;margin-top:6px;">
+            Sugeridos: <em>Auditor</em>, <em>Inventario</em>
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+    {% if form.errors %}
+      <div class="errorlist">
+        {{ form.errors }}
+      </div>
+    {% endif %}
+
+    <div class="toolbar" style="margin-top:16px;">
+      <button type="submit" class="btn-primary">
+        {% if modo == 'crear' %}Crear usuario{% else %}Guardar cambios{% endif %}
+      </button>
+      <a href="{% url 'lista_usuarios' %}" class="btn-secondary">Cancelar</a>
+    </div>
+  </form>
+
+  <style>
+    .form-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
+    .card { background:#fff; border-radius:10px; padding:16px; box-shadow: 0 4px 12px rgba(0,0,0,.05); }
+    .field { margin:10px 0; display:flex; flex-direction:column; gap:6px; }
+    input[type="text"], input[type="email"], input[type="password"] {
+      padding:10px; border:1px solid #ddd; border-radius:8px;
+    }
+    .btn-primary { background:#2C3E50; color:#fff; padding:10px 16px; border:none; border-radius:8px; cursor:pointer; }
+    .btn-secondary { padding:10px 16px; border:1px solid #ccc; border-radius:8px; margin-left:8px; text-decoration:none; }
+    .errorlist { color:#b00020; margin-top:10px; }
+  </style>
+{% endblock %}

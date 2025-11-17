@@ -1,0 +1,56 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sesión cerrada - DataEasy</title>
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #f7f9fc;
+      font-family: Arial, sans-serif;
+    }
+    .logout-box {
+      background: white;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      text-align: center;
+      width: 90%;
+      max-width: 400px;
+    }
+    .logout-box h2 {
+      color: #333;
+      margin-bottom: 15px;
+    }
+    .logout-box p {
+      color: #666;
+      margin-bottom: 25px;
+    }
+    .logout-btn {
+      background-color: #3b82f6;
+      color: white;
+      padding: 10px 25px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .logout-btn:hover {
+      background-color: #2563eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="logout-box">
+    <h2>Sesión cerrada correctamente</h2>
+    <p>Has cerrado sesión sin problemas.</p>
+    <a href="{% url 'index' %}" class="logout-btn">Volver al inicio</a>
+  </div>
+</body>
+</html>

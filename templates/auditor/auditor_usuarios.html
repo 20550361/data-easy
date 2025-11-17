@@ -1,0 +1,40 @@
+{% extends 'auditor/base_auditor.html' %}
+{% load static %}
+
+{% block title %}Usuarios (solo lectura) - DataEasy{% endblock %}
+
+{% block content %}
+  <h2>👥 Usuarios (solo lectura)</h2>
+
+  <div class="card" style="padding:16px; border-radius:10px; background:#fff; box-shadow:0 4px 12px rgba(0,0,0,.05);">
+    <div style="overflow:auto;">
+      <table style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="text-align:left; padding:8px; border-bottom:1px solid #eee;">Usuario</th>
+            <th style="text-align:left; padding:8px; border-bottom:1px solid #eee;">Nombre</th>
+            <th style="text-align:left; padding:8px; border-bottom:1px solid #eee;">Email</th>
+            <th style="text-align:left; padding:8px; border-bottom:1px solid #eee;">Grupos</th>
+            <th style="text-align:left; padding:8px; border-bottom:1px solid #eee;">Activo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in lista_usuarios %}
+            <tr>
+              <td style="padding:8px; border-bottom:1px solid #f5f5f5;">{{ u.username }}</td>
+              <td style="padding:8px; border-bottom:1px solid #f5f5f5;">{{ u.first_name }} {{ u.last_name }}</td>
+              <td style="padding:8px; border-bottom:1px solid #f5f5f5;">{{ u.email }}</td>
+              <td style="padding:8px; border-bottom:1px solid #f5f5f5;">
+                {% for g in u.groups.all %}{{ g.name }}{% if not forloop.last %}, {% endif %}{% empty %}-{% endfor %}
+              </td>
+              <td style="padding:8px; border-bottom:1px solid #f5f5f5;">{{ u.is_active|yesno:"Sí,No" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" style="padding:8px;">Sin usuarios.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:10px; color:#666;">Auditor no puede crear ni editar usuarios.</p>
+  </div>
+{% endblock %}

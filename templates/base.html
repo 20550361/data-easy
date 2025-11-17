@@ -1,11 +1,16 @@
-{% load static %}
+{% load static %}  
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>{% block title %}DataEasy{% endblock %}</title>
-    
+    <!-- Bootstrap 5 CSS (ADD) -->
+<link
+  href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+  rel="stylesheet"
+  integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+  crossorigin="anonymous">
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     
     {% block styles %}{% endblock %}
@@ -22,7 +27,12 @@
             <img src="{% static 'img/user.png' %}" alt="Usuario" class="user-icon" id="userIcon">
             <div class="dropdown-menu" id="dropdownMenu">
                 <a href="{% url 'perfil' %}">🧾 Mi ficha</a>
-                <a href="{% url 'logout' %}">🔒 Cerrar sesión</a>
+                <a href="#" id="logoutLink">🔒 Cerrar sesión</a>
+
+                <!-- Formulario oculto para logout (POST seguro) -->
+                <form id="logoutForm" action="{% url 'logout' %}" method="post" style="display:none;">
+                    {% csrf_token %}
+                </form>
             </div>
         </div>
     </header>
@@ -48,9 +58,6 @@
                 <a href="{% url 'inventario_lista' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'inventario_lista' %}active{% endif %}">
                     📦 Inventario
                 </a>
-                <a href="{% url 'estadisticas' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'estadisticas' %}active{% endif %}">
-                    📊 Estadísticas
-                </a>
                 <a href="{% url 'lista_usuarios' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'lista_usuarios' %}active{% endif %}">
                     👥 Gestión de usuarios
                 </a>
@@ -61,11 +68,27 @@
         </aside>
         
         <main class="content-area"> 
-            {% block content %}
-            {% endblock %}
+
+            {# ======= MENSAJES GLOBALES (FLASH) ======= #}
+            {% if messages %}
+              <div class="flash-container" aria-live="polite">
+                {% for message in messages %}
+                  <div class="flash flash-{{ message.tags|default:'info' }}">
+                    <span class="flash-text">{{ message }}</span>
+                    <button type="button" class="flash-close" aria-label="Cerrar">&times;</button>
+                  </div>
+                {% endfor %}
+              </div>
+            {% endif %}
+            {# ========================================= #}
+
+            {% block content %}{% endblock %}
         </main>
 
-    </div> <script>
+    </div>
+
+    <script>
+    // --- Control del menú desplegable del usuario ---
     const userIcon = document.getElementById('userIcon');
     const dropdownMenu = document.getElementById('dropdownMenu');
     document.addEventListener('click', (e) => {
@@ -75,8 +98,67 @@
             dropdownMenu.classList.remove('show');
         }
     });
+
+    // --- Logout seguro con POST sin alterar el estilo del enlace ---
+    const logoutLink = document.getElementById('logoutLink');
+    const logoutForm = document.getElementById('logoutForm');
+    if (logoutLink && logoutForm) {
+        logoutLink.addEventListener('click', function (e) {
+            e.preventDefault();
+            logoutForm.submit();
+        });
+    }
+
+    // --- Toastr simple: cerrar y autodesaparecer mensajes ---
+    (function () {
+      const flashes = document.querySelectorAll('.flash');
+      flashes.forEach((el) => {
+        // Cierre manual
+        const btn = el.querySelector('.flash-close');
+        if (btn) btn.addEventListener('click', () => el.remove());
+        // Autodesaparecer a los 5s
+        setTimeout(() => {
+          if (el && el.parentNode) el.remove();
+        }, 5000);
+      });
+    })();
     </script>
+
+    <style>
+      /* Estilos básicos para los mensajes */
+      .flash-container { margin: 0 0 16px 0; }
+      .flash {
+        position: relative;
+        padding: 12px 40px 12px 14px;
+        border-radius: 10px;
+        margin-bottom: 8px;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0,0,0,.05);
+      }
+      .flash .flash-close {
+        position: absolute;
+        right: 10px;
+        top: 8px;
+        border: none;
+        background: transparent;
+        font-size: 20px;
+        line-height: 1;
+        cursor: pointer;
+        opacity: 0.6;
+      }
+      .flash .flash-close:hover { opacity: 1; }
+
+      .flash-success { background: #e6ffed; color: #046c4e; border: 1px solid #a7f3d0; }
+      .flash-error, .flash-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+      .flash-warning { background: #fef9c3; color: #92400e; border: 1px solid #fde68a; }
+      .flash-info, .flash-debug { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
+    </style>
     
     {% block scripts %}{% endblock %}
+    <!-- Bootstrap 5 JS (ADD) -->
+<script
+  src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+  integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+  crossorigin="anonymous"></script>
 </body>
 </html>

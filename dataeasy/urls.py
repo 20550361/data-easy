@@ -7,7 +7,7 @@ urlpatterns = [
     path('', views.index, name='index'), 
     path('home/', views.home, name='home'),
     path('recuperacion/', views.recuperacion, name='recuperacion'),
-    path('logout/', LogoutView.as_view(next_page='index'), name='logout'),
+    path('logout/', LogoutView.as_view(template_name='logout.html'), name='logout'),
     
     # --- Páginas Estáticas de Usuario ---
     path('perfil/', views.perfil, name='perfil'),
@@ -17,13 +17,41 @@ urlpatterns = [
     path('inventario/', views.lista_inventario, name='inventario_lista'),
     path('inventario/editar/<int:id_producto>/', views.editar_producto, name='inventario_editar'),
     path('inventario/eliminar/<int:id_producto>/', views.eliminar_producto, name='inventario_eliminar'),
-    path('home/exportar-csv/', views.home_export_csv, name='home_export_csv'),  # NUEVO
+
+    path('inventario/exportar/', views.exportar_excel, name='exportar_excel'),
+    
+    # NUEVO: crear producto
+    path('inventario/nuevo/', views.crear_producto, name='inventario_nuevo'),
+
     # --- Gestión de Usuarios ---
+
+
+    # --- Gestión de Usuarios ---vene
+
     path('usuarios/', views.lista_usuarios, name='lista_usuarios'),
     path('usuarios/crear/', views.crear_usuario, name='usuario_crear'),
     path('usuarios/editar/<int:pk>/', views.editar_usuario, name='usuario_editar'),
+    path('usuarios/eliminar/<int:pk>/', views.eliminar_usuario, name='usuario_eliminar'),
+
     
     # --- Datos y Analíticas ---
     path('estadisticas/', views.estadisticas, name='estadisticas'),
     path('carga_datos/', views.carga_datos, name='carga_datos'),
+
+
+
+    # Auditor
+    path('auditor/home/', views.auditor_home, name='auditor_home'),
+    path('auditor/perfil/', views.auditor_perfil, name='auditor_perfil'),
+    path('auditor/usuarios/', views.auditor_usuarios, name='auditor_usuarios'),
+    path('auditor/estadisticas/', views.auditor_estadisticas, name='auditor_estadisticas'),
+    path('auditor/carga-datos/', views.auditor_carga_datos, name='auditor_carga_datos'),
+
+
+    # --- Rutas Rol Inventario ---
+
+    path('inv/home/', views.inv_home, name='inv_home'),
+    path('inv/perfil/', views.inv_perfil, name='inv_perfil'),
+    path('inv/lista/', views.inv_inventario, name='inv_inventario'),
+    path('inv/carga_datos/', views.inv_carga_datos, name='inv_carga_datos'),
 ]

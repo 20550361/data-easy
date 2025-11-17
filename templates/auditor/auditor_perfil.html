@@ -1,7 +1,8 @@
-{% extends 'base.html' %}
+{% extends 'auditor/base_auditor.html' %}
+
 {% load static %}
 
-{% block title %}Perfil - DataEasy{% endblock %}
+{% block title %}Perfil Auditor - DataEasy{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/perfil.css' %}">
@@ -19,7 +20,7 @@
 
     <div class="form-group">
       <label>Cargo:</label>
-      <input type="text" value="Administrador" disabled>
+      <input type="text" value="Auditor" disabled>
     </div>
 
     <div class="form-group">
@@ -42,7 +43,6 @@
 
 {% block scripts %}
 <script>
-  // === Guardado local ===
   const username = "{{ user.username|escapejs }}";
   const keyEmail = `profile_email_${username}`;
   const keyPhone = `profile_phone_${username}`;
@@ -51,7 +51,6 @@
   const editBtn = document.getElementById('editBtn');
   const saveBtn = document.getElementById('saveBtn');
 
-  // Cargar datos guardados
   document.addEventListener('DOMContentLoaded', () => {
     const savedEmail = localStorage.getItem(keyEmail);
     const savedPhone = localStorage.getItem(keyPhone);
@@ -59,7 +58,6 @@
     if (savedPhone) phoneInput.value = savedPhone;
   });
 
-  // Modo edición
   editBtn.addEventListener('click', () => {
     emailInput.disabled = false;
     phoneInput.disabled = false;
@@ -67,7 +65,6 @@
     saveBtn.classList.remove('hidden');
   });
 
-  // Guardar cambios
   saveBtn.addEventListener('click', () => {
     localStorage.setItem(keyEmail, emailInput.value.trim());
     localStorage.setItem(keyPhone, phoneInput.value.trim());
