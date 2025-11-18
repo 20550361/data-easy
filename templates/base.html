@@ -1,164 +1,154 @@
-{% load static %}  
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>{% block title %}DataEasy{% endblock %}</title>
-    <!-- Bootstrap 5 CSS (ADD) -->
-<link
-  href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-  rel="stylesheet"
-  integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
-  crossorigin="anonymous">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
-    
     {% block styles %}{% endblock %}
-    {% block extra_styles %}{% endblock %}
 </head>
 <body>
 
-    <header class="topbar">
-        <a href="{% url 'home' %}" class="logo-link">
-            <h1 class="logo">DataEasy</h1>
-        </a>
-        
-        <div class="user-menu-wrapper">
-            <img src="{% static 'img/user.png' %}" alt="Usuario" class="user-icon" id="userIcon">
-            <div class="dropdown-menu" id="dropdownMenu">
-                <a href="{% url 'perfil' %}">🧾 Mi ficha</a>
-                <a href="#" id="logoutLink">🔒 Cerrar sesión</a>
+<header class="topbar">
+    <a href="{% url 'home' %}" class="logo-link"><h1 class="logo">DataEasy</h1></a>
 
-                <!-- Formulario oculto para logout (POST seguro) -->
-                <form id="logoutForm" action="{% url 'logout' %}" method="post" style="display:none;">
-                    {% csrf_token %}
-                </form>
-            </div>
+    <div class="user-menu-wrapper">
+        <img src="{% static 'img/user.png' %}" class="user-icon" id="userIcon">
+
+        <div class="dropdown-menu" id="dropdownMenu">
+            <a href="{% url 'perfil' %}">🧾 Mi ficha</a>
+            <a href="#" id="logoutLink">🔒 Cerrar sesión</a>
+            <form id="logoutForm" action="{% url 'logout' %}" method="post" style="display:none;">
+                {% csrf_token %}
+            </form>
         </div>
-    </header>
-
-    <div class="main-container">
-
-        <aside class="sidebar" id="sidebar">
-            
-            <div class="profile-section">
-                <div class="profile-pic-container">
-                    <img src="{% static 'img/user.png' %}" alt="Perfil" class="profile-pic">
-                </div>
-                <h3>{{ user.username }}</h3>
-            </div>
-            
-            <nav class="sidebar-nav">
-                <a href="{% url 'home' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
-                    🏠 Home
-                </a>
-                <a href="{% url 'perfil' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'perfil' %}active{% endif %}">
-                    🧾 Mi ficha
-                </a>
-                <a href="{% url 'inventario_lista' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'inventario_lista' %}active{% endif %}">
-                    📦 Inventario
-                </a>
-                <a href="{% url 'lista_usuarios' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'lista_usuarios' %}active{% endif %}">
-                    👥 Gestión de usuarios
-                </a>
-                <a href="{% url 'carga_datos' %}" class="sidebar-btn {% if request.resolver_match.url_name == 'carga_datos' %}active{% endif %}">
-                    📁 Carga de datos
-                </a>
-            </nav>
-        </aside>
-        
-        <main class="content-area"> 
-
-            {# ======= MENSAJES GLOBALES (FLASH) ======= #}
-            {% if messages %}
-              <div class="flash-container" aria-live="polite">
-                {% for message in messages %}
-                  <div class="flash flash-{{ message.tags|default:'info' }}">
-                    <span class="flash-text">{{ message }}</span>
-                    <button type="button" class="flash-close" aria-label="Cerrar">&times;</button>
-                  </div>
-                {% endfor %}
-              </div>
-            {% endif %}
-            {# ========================================= #}
-
-            {% block content %}{% endblock %}
-        </main>
-
     </div>
+</header>
 
-    <script>
-    // --- Control del menú desplegable del usuario ---
-    const userIcon = document.getElementById('userIcon');
-    const dropdownMenu = document.getElementById('dropdownMenu');
-    document.addEventListener('click', (e) => {
-        if (userIcon && userIcon.contains(e.target)) {
-            dropdownMenu.classList.toggle('show');
-        } else if (dropdownMenu && !dropdownMenu.contains(e.target) && !userIcon.contains(e.target)) {
-            dropdownMenu.classList.remove('show');
+<div class="main-container">
+
+    <aside class="sidebar">
+        <div class="profile-section">
+            <div class="profile-pic-container">
+                <img src="{% static 'img/user.png' %}" class="profile-pic">
+            </div>
+            <h3>{{ user.username }}</h3>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="{% url 'home' %}" class="sidebar-btn">🏠 Home</a>
+            <a href="{% url 'perfil' %}" class="sidebar-btn">🧾 Mi ficha</a>
+            <a href="{% url 'inventario_lista' %}" class="sidebar-btn">📦 Inventario</a>
+            <a href="{% url 'lista_usuarios' %}" class="sidebar-btn">👥 Gestión de usuarios</a>
+
+            <!-- BOTÓN DE POP-UP -->
+            <a href="#" class="sidebar-btn"
+               data-bs-toggle="modal"
+               data-bs-target="#modalCargaDatos">
+                📁 Carga masiva
+            </a>
+        </nav>
+    </aside>
+
+    <main class="content-area">
+
+        {% if messages %}
+        <div class="container mt-2">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+
+    </main>
+</div>
+
+<!-- ======================================================== -->
+<!-- 🔥 MODAL DE CARGA MASIVA (VERSIÓN COMPLETA) -->
+<!-- ======================================================== -->
+<div class="modal fade" id="modalCargaDatos" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">📁 Carga masiva de Excel</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- FORMULARIO -->
+        <form id="formExcel" method="post" enctype="multipart/form-data"
+              action="{% url 'carga_datos' %}">
+
+            {% csrf_token %}
+
+            <label class="form-label">Selecciona archivo Excel:</label>
+            <input type="file" class="form-control" name="archivo_excel"
+                   id="archivo_excel" accept=".xlsx,.xls" required>
+
+            <!-- PREVISUALIZACIÓN -->
+            <div id="previewContainer" class="mt-3" style="display:none;">
+                <h6>📄 Previsualización:</h6>
+                <table class="table table-bordered table-sm" id="previewTable"></table>
+            </div>
+
+            <!-- PROGRESO -->
+            <div id="progressContainer" class="mt-3" style="display:none;">
+                <div class="progress">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated"
+                         id="progressBar" style="width: 0%;">
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 mt-3">
+                🔥 Subir datos
+            </button>
+
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOOTSTRAP JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- ======================================================== -->
+<!-- 🔥 JAVASCRIPT DE PREVISUALIZACIÓN + PROGRESO -->
+<!-- ======================================================== -->
+<script>
+
+
+// ANIMACIÓN DE PROGRESO AL ENVIAR FORMULARIO
+document.getElementById("formExcel").addEventListener("submit", function() {
+    document.getElementById("progressContainer").style.display = "block";
+    let bar = document.getElementById("progressBar");
+    let width = 0;
+
+    let interval = setInterval(() => {
+        if (width >= 100) clearInterval(interval);
+        else {
+            width += 5;
+            bar.style.width = width + "%";
         }
-    });
+    }, 80);
+});
 
-    // --- Logout seguro con POST sin alterar el estilo del enlace ---
-    const logoutLink = document.getElementById('logoutLink');
-    const logoutForm = document.getElementById('logoutForm');
-    if (logoutLink && logoutForm) {
-        logoutLink.addEventListener('click', function (e) {
-            e.preventDefault();
-            logoutForm.submit();
-        });
-    }
+</script>
 
-    // --- Toastr simple: cerrar y autodesaparecer mensajes ---
-    (function () {
-      const flashes = document.querySelectorAll('.flash');
-      flashes.forEach((el) => {
-        // Cierre manual
-        const btn = el.querySelector('.flash-close');
-        if (btn) btn.addEventListener('click', () => el.remove());
-        // Autodesaparecer a los 5s
-        setTimeout(() => {
-          if (el && el.parentNode) el.remove();
-        }, 5000);
-      });
-    })();
-    </script>
+<!-- XLSX LIBRARY (PREVISUALIZACIÓN) -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
-    <style>
-      /* Estilos básicos para los mensajes */
-      .flash-container { margin: 0 0 16px 0; }
-      .flash {
-        position: relative;
-        padding: 12px 40px 12px 14px;
-        border-radius: 10px;
-        margin-bottom: 8px;
-        font-weight: 500;
-        box-shadow: 0 4px 12px rgba(0,0,0,.05);
-      }
-      .flash .flash-close {
-        position: absolute;
-        right: 10px;
-        top: 8px;
-        border: none;
-        background: transparent;
-        font-size: 20px;
-        line-height: 1;
-        cursor: pointer;
-        opacity: 0.6;
-      }
-      .flash .flash-close:hover { opacity: 1; }
-
-      .flash-success { background: #e6ffed; color: #046c4e; border: 1px solid #a7f3d0; }
-      .flash-error, .flash-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-      .flash-warning { background: #fef9c3; color: #92400e; border: 1px solid #fde68a; }
-      .flash-info, .flash-debug { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
-    </style>
-    
-    {% block scripts %}{% endblock %}
-    <!-- Bootstrap 5 JS (ADD) -->
-<script
-  src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-  integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
-  crossorigin="anonymous"></script>
+{% block scripts %}{% endblock %}
 </body>
 </html>

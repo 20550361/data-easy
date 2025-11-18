@@ -619,3 +619,80 @@ def exportar_excel(request):
     df.to_excel(response, index=False)
 
     return response
+
+
+
+
+@login_required
+def carga_datos(request):
+    if request.method == 'POST' and request.FILES.get('archivo_excel'):
+
+        archivo = request.FILES['archivo_excel']
+        next_url = request.POST.get("next") or "home"
+
+        columnas_esperadas = [
+            'nombre_producto', 'categoria', 'marca',
+            'descripcion', 'stock_actual', 'stock_minimo'
+        ]
+
+        try:
+            df = pd.read_excel(archivo)
+            df.columns = [col.strip().lower().replace(" ", "_") for col in df.columns]
+
+            columnas_faltantes = [c for c in columnas_esperadas if c not in df.columns]
+            if columnas_faltantes:
+                messages.error(request, f"❌ Columnas faltantes: {', '.join(columnas_faltantes)}")
+                return redirect(next_url)
+
+            productos_creados = 0
+            productos_actualizados = 0
+
+            for _, row in df.iterrows():
+                nombre = str(row.get("nombre_producto", "")).strip()
+                if not nombre:
+                    continue
+
+                categoria_nombre = str(row.get("categoria", "")).strip() or None
+                marca_nombre = str(row.get("marca", "")).strip() or None
+                descripcion_val = str(row.get("descripcion", "")).strip()
+                stock_minimo_val = int(row.get("stock_minimo", 0))
+                stock_actual_val = int(row.get("stock_actual", 0))
+
+                categoria = Categoria.objects.get_or_create(nombre_categoria=categoria_nombre)[0] if categoria_nombre else None
+                marca = Marca.objects.get_or_create(nombre_marca=marca_nombre)[0] if marca_nombre else None
+
+                defaults = {
+                    "descripcion": descripcion_val,
+                    "categoria": categoria,
+                    "marca": marca,
+                    "stock_minimo": stock_minimo_val,
+                    "stock_actual": stock_actual_val,
+                }
+
+                producto, creado = Producto.objects.update_or_create(
+                    nombre_producto=nombre,
+                    defaults=defaults
+                )
+
+                if creado:
+                    productos_creados += 1
+                    if stock_actual_val > 0:
+                        MovimientoInventario.objects.create(
+                            producto=producto,
+                            tipo_movimiento='entrada',
+                            cantidad=stock_actual_val
+                        )
+                else:
+                    productos_actualizados += 1
+
+            messages.success(
+                request,
+                f"📦 Carga completada: {productos_creados} nuevos, {productos_actualizados} actualizados."
+            )
+
+        except Exception as e:
+            messages.error(request, f"❌ Error: {e}")
+
+        return redirect(next_url)
+
+    return redirect("home")
