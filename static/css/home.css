@@ -90,3 +90,21 @@ td.acciones{ width:1%; white-space:nowrap; }
 @media (max-width: 640px){
   .inv-header{ flex-direction:column; align-items:flex-start; gap:12px; }
 }
+
+.alerta-stock {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: #ffcc00;
+    padding: 10px 16px;
+    border-radius: 8px;
+    color: #000;
+    font-weight: bold;
+    cursor: grab;
+    z-index: 9999;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    user-select: none;
+}
+.alerta-stock:active {
+    cursor: grabbing;
+}

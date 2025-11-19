@@ -72,8 +72,23 @@ def home(request):
     if request.user.groups.filter(name__iexact='Auditor').exists() and not request.user.is_superuser:
         return redirect('auditor_home')
 
-    # ⬇️ Mismo contexto que estadísticas (gráficos, totales, filtros, listas)
+    # Contexto principal
     context = _build_estadisticas_context(request)
+
+    # ============================
+    # 🔥 ALERTA DE STOCK BAJO
+    # ============================
+    total_sin_stock = context.get("productos_sin_stock").count()
+    total_bajo_stock = context.get("productos_bajo_stock").count()
+
+    total_alertas = total_sin_stock + total_bajo_stock
+
+    if total_alertas > 0:
+        messages.warning(
+            request,
+            f"⚠ Atención: {total_alertas} productos están sin stock o con stock bajo."
+        )
+
     return render(request, 'home.html', context)
 
 
