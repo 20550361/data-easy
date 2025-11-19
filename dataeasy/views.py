@@ -622,7 +622,6 @@ def exportar_excel(request):
 
 
 
-
 @login_required
 def carga_datos(request):
     if request.method == 'POST' and request.FILES.get('archivo_excel'):
@@ -631,8 +630,12 @@ def carga_datos(request):
         next_url = request.POST.get("next") or "home"
 
         columnas_esperadas = [
-            'nombre_producto', 'categoria', 'marca',
-            'descripcion', 'stock_actual', 'stock_minimo'
+            'nombre_producto',
+            'categoria',
+            'marca',
+            'descripcion',
+            'stock_actual',
+            'stock_minimo'
         ]
 
         try:
@@ -676,6 +679,7 @@ def carga_datos(request):
 
                 if creado:
                     productos_creados += 1
+
                     if stock_actual_val > 0:
                         MovimientoInventario.objects.create(
                             producto=producto,
@@ -691,7 +695,7 @@ def carga_datos(request):
             )
 
         except Exception as e:
-            messages.error(request, f"❌ Error: {e}")
+            messages.error(request, f"❌ Error procesando Excel: {e}")
 
         return redirect(next_url)
 

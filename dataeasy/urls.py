@@ -23,8 +23,6 @@ urlpatterns = [
     # NUEVO: crear producto
     path('inventario/nuevo/', views.crear_producto, name='inventario_nuevo'),
 
-    # --- Gestión de Usuarios ---
-
 
     # --- Gestión de Usuarios ---vene
 
