@@ -1,110 +1,101 @@
-/* ====== tarjetas / contenedores ====== */
-.card{
-  background:#fff;
-  border-radius:12px;
+/* ===========================================
+   HEADER
+===========================================*/
+.home-header {
+  margin-bottom: 12px;
+}
+.home-title {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+.home-subtitle {
+  margin: 0;
+  color: #6b7280;
+}
+
+/* ===========================================
+   TARJETAS
+===========================================*/
+.stats-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.stat-card {
+  background: #fff;
+  padding: 18px;
+  border-radius: 10px;
   box-shadow: var(--sombra-ligera);
-  padding:20px;
+}
+.stat-card h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+.stat-card .value {
+  font-size: 1.35rem;
+  font-weight: 700;
 }
 
-/* ====== cabecera con botones ====== */
-.inv-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  margin:20px 0;
+/* ===========================================
+   GRÁFICOS
+===========================================*/
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
 }
-.inv-header .title-wrap h2{ margin:0 0 6px 0; }
-.inv-header .title-wrap p{ margin:0; color:#6b7280; font-size:.95rem; }
-
-/* ====== botones (usa tus colores base) ====== */
-.actions{ display:flex; gap:10px; flex-wrap:wrap; }
-.btn{
-  display:inline-block;
-  padding:10px 16px;
-  border-radius:8px;
-  text-decoration:none;
-  color:#fff;
-  font-weight:600;
-  transition: transform .06s ease, opacity .2s;
+.chart-container {
+  background: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  min-height: 380px;
+  box-shadow: var(--sombra-ligera);
 }
-.btn:active{ transform: scale(.98); }
-
-.btn-primary{ background: var(--color-sidebar); } /* azul de tu sidebar */
-.btn-success{ background: #1ABC9C; }
-.btn-warning{ background: #E67E22; color:#fff; }
-.btn-teal{ background:#16a085; padding:8px 12px; border-radius:8px; font-weight:700; }
-
-/* ====== subheader ====== */
-.inv-table .subheader{
-  display:flex; justify-content:space-between; align-items:baseline;
-  margin-bottom:10px;
-}
-.inv-table .subheader .muted{ color:#6b7280; font-size:.9rem; }
-
-/* ====== tabla ====== */
-.table-responsive{ overflow:auto; border-radius:12px; }
-table{
-  width:100%;
-  border-collapse:separate;
-  border-spacing:0;
-  min-width:920px; /* que no se rompa en pantallas chicas */
-}
-thead th{
-  background:#f7fafc;
-  color:#374151;
-  text-align:left;
-  padding:14px 16px;
-  border-bottom:1px solid #e5e7eb;
-  font-weight:700;
-}
-tbody td{
-  padding:14px 16px;
-  border-bottom:1px solid #f0f2f4;
-  vertical-align:middle;
-}
-tbody tr:last-child td{ border-bottom:none; }
-
-/* esquinas redondeadas del header de la tabla */
-thead th:first-child{ border-top-left-radius:12px; }
-thead th:last-child{ border-top-right-radius:12px; }
-
-/* ====== colores por estado (igual al video) ====== */
-.row-danger{ background:#fde2e1; }   /* rojo claro */
-.row-warning{ background:#fff3cd; }  /* amarillo claro */
-.row-ok{ background:#e7f7ef; }       /* verde claro */
-
-/* badges */
-.badge{
-  padding:6px 10px; border-radius:999px; font-size:.85rem; font-weight:700;
-}
-.badge.danger{ background:#e74c3c; color:#fff; }
-.badge.warn{   background:#f39c12; color:#fff; }
-.badge.ok{     background:#2ecc71; color:#fff; }
-
-/* columnas útiles */
-td.code{ font-weight:700; color:#111827; letter-spacing:.3px; }
-td.name{ font-weight:600; }
-td.acciones{ width:1%; white-space:nowrap; }
-
-/* responsive */
-@media (max-width: 640px){
-  .inv-header{ flex-direction:column; align-items:flex-start; gap:12px; }
+.small-chart canvas {
+  height: 320px !important;
 }
 
+/* MOVIMIENTOS MÁS ESTRECHO */
+#movimientosMesChart {
+  width: 85% !important;
+  margin: 0 auto;
+}
+
+/* ===========================================
+   LISTAS
+===========================================*/
+.low-stock-lists {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  margin-top: 16px;
+}
+.stock-list-container {
+  background: #fff;
+  padding: 16px;
+  border-radius: 10px;
+  box-shadow: var(--sombra-ligera);
+}
+
+/* ===========================================
+   ALERTA FLOTANTE
+===========================================*/
 .alerta-stock {
-    position: fixed;
-    top: 80px;
-    right: 20px;
-    background: #ffcc00;
-    padding: 10px 16px;
-    border-radius: 8px;
-    color: #000;
-    font-weight: bold;
-    cursor: grab;
-    z-index: 9999;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-    user-select: none;
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  background: #ffcc00;
+  padding: 16px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  cursor: grab;
+  max-width: 330px;
+  z-index: 9999;
 }
-.alerta-stock:active {
-    cursor: grabbing;
-}
+.alerta-stock:active { cursor: grabbing; }
+.alerta-stock-list { padding-left: 0; list-style: none; }
+.alerta-stock-list li { margin-bottom: 4px; }
+.alerta-stock-link { font-size: 0.8rem; }

@@ -1,116 +1,148 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Estadísticas - DataEasy{% endblock %}
+{% block title %}Inicio - DataEasy{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{% static 'css/estadisticas.css' %}">
-
+<link rel="stylesheet" href="{% static 'css/home.css' %}">
 <style>
-/* --- ALERTA FLOTANTE (GRANDE, MOVIBLE, LIMITADA) --- */
-.alerta-stock {
-    position: fixed;
-    top: 90px;
-    right: 20px;
-    background: #ffcc00;
-    padding: 15px 22px;
-    border-radius: 10px;
-    color: #000;
-    font-weight: bold;
-    cursor: grab;
-    z-index: 9999;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.35);
-    user-select: none;
-    font-size: 1.1rem;
-    min-width: 240px;
-    text-align: center;
+/* --- CSS PARA EL FILTRO DE FECHAS --- */
+.filtro-fechas {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+    background: #ffffffdd;
+    padding: 12px 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #e5e7eb;
+    flex-wrap: wrap;
 }
-.alerta-stock:active {
-    cursor: grabbing;
+.filtro-fechas label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 3px;
+}
+.filtro-fechas input[type="date"] {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+.filtro-fechas .btn {
+    height: 38px;
 }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<h2>📊 Estadísticas del Inventario</h2>
-<p>Visualiza el rendimiento y estado de tu inventario.</p>
+<!-- ENCABEZADO -->
+<div class="home-header">
+  <h2 class="home-title">Hola, {{ request.user.first_name|default:request.user.username }} 👋</h2>
+  <p class="home-subtitle">Dashboard resumido del inventario</p>
+</div>
 
+<!-- FILTRO DE FECHAS -->
+<form method="get" class="filtro-fechas">
+
+    <div>
+        <label>Desde</label>
+        <input type="date" name="fecha_inicio"
+               value="{{ fecha_inicio|date:'Y-m-d' }}">
+    </div>
+
+    <div>
+        <label>Hasta</label>
+        <input type="date" name="fecha_fin"
+               value="{{ fecha_fin|date:'Y-m-d' }}">
+    </div>
+
+    <button type="submit" class="btn btn-primary">Filtrar</button>
+
+    {% if request.GET.fecha_inicio or request.GET.fecha_fin %}
+    <a href="{% url 'home' %}" class="btn btn-outline-secondary">❌ Limpiar</a>
+    {% endif %}
+</form>
+
+<!-- ALERTA FLOTANTE -->
 {% if productos_bajo_stock or productos_sin_stock %}
-<div id="alertaStock" class="alerta-stock">
-    ⚠️ Atención: Existen productos con bajo stock o sin stock.
+<div id="alerta-stock-home" class="alerta-stock-home alerta-stock">
+    <h5>⚠ Productos con problemas de stock</h5>
+
+    <ul class="alerta-stock-list">
+        {% for p in productos_sin_stock %}
+        <li>🔴 
+            <a href="{% url 'inventario_lista' %}?q={{ p.nombre_producto }}">
+                {{ p.nombre_producto }}
+            </a> — Sin stock
+        </li>
+        {% endfor %}
+        {% for p in productos_bajo_stock %}
+        <li>🟡 
+            <a href="{% url 'inventario_lista' %}?q={{ p.nombre_producto }}">
+                {{ p.nombre_producto }}
+            </a> ({{ p.stock_actual }}/{{ p.stock_minimo }})
+        </li>
+        {% endfor %}
+    </ul>
+
+    <div class="alerta-stock-footer">
+        <a href="{% url 'inventario_lista' %}?solo_alertas=1" class="alerta-stock-link">
+            Ver en inventario
+        </a>
+    </div>
 </div>
 {% endif %}
 
-<form method="GET" class="date-filter-form">
-    <label for="fecha_inicio">Desde:</label>
-    <input type="date" id="fecha_inicio" name="fecha_inicio" value="{{ fecha_inicio|date:'Y-m-d' }}">
-
-    <label for="fecha_fin">Hasta:</label>
-    <input type="date" id="fecha_fin" name="fecha_fin" value="{{ fecha_fin|date:'Y-m-d' }}">
-
-    <button type="submit">🔍 Filtrar</button>
-</form>
-
+<!-- TARJETAS -->
 <section class="stats-summary">
-    <div class="stat-card">
-        <h3>Total Productos</h3>
-        <div class="value">{{ total_productos }}</div>
-    </div>
-    <div class="stat-card">
-        <h3>Stock Total (Unidades)</h3>
-        <div class="value">{{ stock_total|default:"0" }}</div>
-    </div>
-    <div class="stat-card">
-        <h3>Total Categorías</h3>
-        <div class="value">{{ total_categorias }}</div>
-    </div>
-    <div class="stat-card">
-        <h3>Total Marcas</h3>
-        <div class="value">{{ total_marcas }}</div>
-    </div>
-    <div class="stat-card">
-        <h3>Total Movimientos (Rango)</h3>
-        <div class="value">{{ total_movimientos }}</div>
-    </div>
+    <div class="stat-card"><h3>Total Productos</h3><div class="value">{{ total_productos }}</div></div>
+    <div class="stat-card"><h3>Stock Total</h3><div class="value">{{ stock_total }}</div></div>
+    <div class="stat-card"><h3>Categorías</h3><div class="value">{{ total_categorias }}</div></div>
+    <div class="stat-card"><h3>Marcas</h3><div class="value">{{ total_marcas }}</div></div>
 </section>
 
+<!-- GRÁFICOS -->
 <section class="charts-grid">
-    <div class="chart-container">
-        <h3>Movimientos por Mes</h3>
+
+    <!-- MOVIMIENTOS -->
+    <div class="chart-container small-chart">
+        <h3>Movimientos</h3>
         <canvas id="movimientosMesChart"></canvas>
     </div>
-    <div class="chart-container">
-        <h3>Stock por Categoría</h3>
+
+    <!-- PIE -->
+    <div class="chart-container small-chart">
+        <h3>Categorías</h3>
         <canvas id="stockCategoriaChart"></canvas>
     </div>
-    <div class="chart-container">
-        <h3>Marcas con Stock Crítico</h3>
+
+    <!-- STOCK CRÍTICO -->
+    <div class="chart-container small-chart">
+        <h3>Stock Crítico</h3>
         <canvas id="stockCriticoMarcaChart"></canvas>
     </div>
+
 </section>
 
+<!-- LISTAS -->
 <section class="low-stock-lists">
     <div class="stock-list-container">
-        <h3>⚠️ Productos Bajo Stock Mínimo</h3>
+        <h3>🟡 Bajo Stock</h3>
         <ul>
             {% for prod in productos_bajo_stock %}
-            <li>
-                <a href="{% url 'inventario_editar' prod.id %}">{{ prod.nombre_producto }}</a>
-                <span class="stock-level">({{ prod.stock_actual }}/{{ prod.stock_minimo }})</span>
-            </li>
+            <li>{{ prod.nombre_producto }} ({{ prod.stock_actual }}/{{ prod.stock_minimo }})</li>
             {% empty %}
-            <li>No hay productos bajo el mínimo.</li>
+            <li>No hay productos bajo mínimo.</li>
             {% endfor %}
         </ul>
     </div>
+
     <div class="stock-list-container">
-        <h3>🚫 Productos Sin Stock</h3>
+        <h3>🔴 Sin Stock</h3>
         <ul>
             {% for prod in productos_sin_stock %}
-            <li>
-                <a href="{% url 'inventario_editar' prod.id %}">{{ prod.nombre_producto }}</a>
-            </li>
+            <li>{{ prod.nombre_producto }}</li>
             {% empty %}
             <li>No hay productos sin stock.</li>
             {% endfor %}
@@ -124,101 +156,100 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-// =====================================
-// 🔥 ALERTA FLOTANTE MOVIBLE LIMITADA
-// =====================================
-const alerta = document.getElementById("alertaStock");
-if (alerta) {
+/* ===========================================
+   ALERTA FLOTANTE DRAG
+===========================================*/
+document.addEventListener("DOMContentLoaded", () => {
+    const box = document.getElementById("alerta-stock-home");
+    if (!box) return;
 
-    let offsetX = 0, offsetY = 0;
-    let moviendo = false;
+    let mov = false, offsetX = 0, offsetY = 0;
 
-    alerta.addEventListener("mousedown", (e) => {
-        moviendo = true;
-        alerta.style.transition = "none";
-        offsetX = e.clientX - alerta.getBoundingClientRect().left;
-        offsetY = e.clientY - alerta.getBoundingClientRect().top;
+    box.addEventListener("mousedown", e => {
+        mov = true;
+        offsetX = e.clientX - box.getBoundingClientRect().left;
+        offsetY = e.clientY - box.getBoundingClientRect().top;
+        box.style.cursor = "grabbing";
     });
 
-    document.addEventListener("mousemove", (e) => {
-        if (!moviendo) return;
+    document.addEventListener("mousemove", e => {
+        if (!mov) return;
 
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        const boxWidth = alerta.offsetWidth;
-        const boxHeight = alerta.offsetHeight;
+        let x = e.clientX - offsetX;
+        let y = e.clientY - offsetY;
 
-        let newX = e.clientX - offsetX;
-        let newY = e.clientY - offsetY;
+        const maxX = window.innerWidth - box.offsetWidth - 10;
+        const maxY = window.innerHeight - box.offsetHeight - 10;
 
-        if (newX < 0) newX = 0;
-        if (newY < 0) newY = 0;
-        if (newX + boxWidth > viewportWidth) newX = viewportWidth - boxWidth;
-        if (newY + boxHeight > viewportHeight) newY = viewportHeight - boxHeight;
+        x = Math.min(Math.max(x, 10), maxX);
+        y = Math.min(Math.max(y, 70), maxY);
 
-        alerta.style.left = newX + "px";
-        alerta.style.top = newY + "px";
-        alerta.style.right = "auto";
+        box.style.left = x + "px";
+        box.style.top = y + "px";
     });
 
-    document.addEventListener("mouseup", () => {
-        moviendo = false;
-    });
-}
-</script>
+    document.addEventListener("mouseup", () => mov = false);
+});
 
-<script>
-// 📊 Chart.js data
-const chartData = JSON.parse('{{ chart_data_json|escapejs }}');
+/* ===========================================
+   DATOS CHARTS
+===========================================*/
+const data = JSON.parse(`{{ chart_data_json|escapejs }}`);
 
-// --- 1. Movimientos por Mes ---
-const ctxMov = document.getElementById('movimientosMesChart')?.getContext('2d');
-if (ctxMov) {
-    new Chart(ctxMov, {
-        type: 'line',
-        data: {
-            labels: chartData.meses,
-            datasets: [
-                { label: 'Entradas', data: chartData.entradas, borderColor: 'rgb(75,192,192)', tension: 0.1 },
-                { label: 'Salidas', data: chartData.salidas, borderColor: 'rgb(255,99,132)', tension: 0.1 }
+/* MOVIMIENTOS — Línea compacta */
+new Chart(document.getElementById('movimientosMesChart'), {
+    type: 'line',
+    data: {
+        labels: data.meses,
+        datasets: [
+            { label: 'Entradas', data: data.entradas, borderColor: '#4e79a7', borderWidth: 2 },
+            { label: 'Salidas', data: data.salidas, borderColor: '#e15759', borderWidth: 2 }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { left: 20, right: 20 } },
+        elements: { point: { radius: 3 } }
+    }
+});
+
+/* PIE */
+new Chart(document.getElementById('stockCategoriaChart'), {
+    type: 'doughnut',
+    data: {
+        labels: data.stock_por_categoria_labels,
+        datasets: [{
+            data: data.stock_por_categoria_values,
+            backgroundColor: [
+                '#4e79a7','#f28e2b','#e15759','#76b7b2',
+                '#59a14f','#edc948','#b07aa1','#ff9da7'
             ]
-        }
-    });
-}
+        }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+});
 
-// --- 2. Stock por Categoría ---
-const ctxCat = document.getElementById('stockCategoriaChart')?.getContext('2d');
-if (ctxCat) {
-    new Chart(ctxCat, {
-        type: 'pie',
-        data: {
-            labels: chartData.stock_por_categoria_labels,
-            datasets: [{
-                data: chartData.stock_por_categoria_values,
-                backgroundColor: ['#3498DB','#E74C3C','#9B59B6','#F1C40F','#2ECC71','#1ABC9C','#E67E22','#BDC3C7','#7F8C8D','#34495E']
-            }]
-        }
-    });
-}
-
-// --- 3. Stock Crítico por Marca ---
-const ctxCrit = document.getElementById('stockCriticoMarcaChart')?.getContext('2d');
-if (ctxCrit) {
-    new Chart(ctxCrit, {
-        type: 'bar',
-        data: {
-            labels: chartData.stock_critico_marca_labels,
-            datasets: [{
-                label: 'Nº Productos Críticos',
-                data: chartData.stock_critico_marca_values,
-                backgroundColor: 'rgba(230,126,34,0.6)',
-                borderColor: 'rgba(230,126,34,1)',
-                borderWidth: 1
-            }]
-        },
-        options: { indexAxis: 'y' }
-    });
-}
+/* STOCK CRÍTICO — Barras delgadas */
+new Chart(document.getElementById('stockCriticoMarcaChart'), {
+    type: 'bar',
+    data: {
+        labels: data.stock_critico_marca_labels,
+        datasets: [{
+            label: 'Críticos',
+            data: data.stock_critico_marca_values,
+            backgroundColor: '#f28e2b',
+            borderColor: '#c56e1a',
+            borderWidth: 1,
+            barThickness: 22
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true } }
+    }
+});
 </script>
 
 {% endblock %}
