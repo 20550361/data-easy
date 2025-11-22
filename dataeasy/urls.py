@@ -39,6 +39,8 @@ urlpatterns = [
     path('estadisticas/', views.estadisticas, name='estadisticas'),
     path('carga_datos/', views.carga_datos, name='carga_datos'),
 
-
-
+    # --- FACTURACIÓN ---
+    path('facturacion/', views.facturacion, name='facturacion'),
+    path('facturacion/registrar/', views.registrar_factura, name='registrar_factura'),
+    path('facturacion/pdf/<int:id>/', views.factura_pdf, name='factura_pdf'),
 ]

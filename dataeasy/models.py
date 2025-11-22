@@ -83,3 +83,18 @@ class SeguridadUsuario(models.Model):
         """
         norm = lambda s: (s or "").strip().casefold()
         return norm(r1) == norm(self.respuesta1) and norm(r2) == norm(self.respuesta2)
+    
+class Factura(models.Model):
+    fecha = models.DateTimeField(auto_now_add=True)
+    total = models.DecimalField(max_digits=12, decimal_places=2)
+
+    def __str__(self):
+        return f"Factura #{self.id}"
+
+
+class DetalleFactura(models.Model):
+    factura = models.ForeignKey(Factura, related_name="detalles", on_delete=models.CASCADE)
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
+    cantidad = models.PositiveIntegerField()
+    precio = models.DecimalField(max_digits=12, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2)

@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Crear Factura</h2>
+
+<div class="card p-3">
+
+    <label>Nombre del Cliente:</label>
+    <input class="form-control mb-3" id="cliente">
+
+    <h4>Productos</h4>
+
+    <table class="table table-bordered" id="tabla">
+        <thead>
+        <tr>
+            <th>Producto</th>
+            <th>Cantidad</th>
+            <th>Precio</th>
+            <th>Subtotal</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <button class="btn btn-success" onclick="agregarFila()">+ Agregar Producto</button>
+
+    <hr>
+    <h4>Total: $ <span id="total">0</span></h4>
+
+    <button class="btn btn-primary mt-3" onclick="guardarFactura()">Guardar y generar PDF</button>
+
+</div>
+
+
+<script>
+// Lista de productos desde Django
+const PRODUCTOS = {{ productos|safe }};
+
+function agregarFila(){
+    let tbody = document.querySelector("#tabla tbody");
+
+    let fila = `
+    <tr>
+        <td>
+            <select class="form-control producto">
+                ${PRODUCTOS.map(p => `<option value="${p.id}" data-precio="${p.precio}">${p.nombre_producto}</option>`).join("")}
+            </select>
+        </td>
+        <td><input type="number" class="form-control cantidad" value="1"></td>
+        <td class="precio">0</td>
+        <td class="subtotal">0</td>
+        <td><button class="btn btn-danger" onclick="this.closest('tr').remove(); calcularTotal()">X</button></td>
+    </tr>`;
+
+    tbody.insertAdjacentHTML("beforeend", fila);
+    calcularTotal();
+}
+
+document.addEventListener("input", calcularTotal);
+
+function calcularTotal(){
+    let total = 0;
+
+    document.querySelectorAll("#tabla tbody tr").forEach(tr => {
+        let select = tr.querySelector(".producto");
+        let precio = parseFloat(select.selectedOptions[0].dataset.precio);
+        let cantidad = parseInt(tr.querySelector(".cantidad").value);
+
+        let subtotal = precio * cantidad;
+        tr.querySelector(".precio").innerText = precio;
+        tr.querySelector(".subtotal").innerText = subtotal;
+
+        total += subtotal;
+    });
+
+    document.getElementById("total").innerText = total;
+}
+
+function guardarFactura(){
+    let cliente = document.getElementById("cliente").value;
+
+    let items = [];
+    document.querySelectorAll("#tabla tbody tr").forEach(tr => {
+        items.push({
+            id: tr.querySelector(".producto").value,
+            cantidad: tr.querySelector(".cantidad").value,
+            precio: tr.querySelector(".precio").innerText,
+            subtotal: tr.querySelector(".subtotal").innerText
+        });
+    });
+
+    fetch("{% url 'registrar_factura' %}", {
+        method: "POST",
+        body: JSON.stringify({
+            cliente: cliente,
+            items: items,
+            total: document.getElementById("total").innerText
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.status == "ok"){
+            window.location.href = "/facturacion/pdf/" + data.factura_id + "/";
+        }
+    });
+}
+</script>
+
+{% endblock %}

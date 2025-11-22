@@ -14,7 +14,9 @@ from django.db.models import Sum, Count, F, Q
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from django.contrib.auth.models import User
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+from xhtml2pdf import pisa 
+from django.template.loader import render_to_string
 
 from .models import Producto, Categoria, Marca, MovimientoInventario
 from .forms import UserCreateForm, UserUpdateForm
@@ -437,5 +439,65 @@ def exportar_excel(request):
     response = HttpResponse(content_type="application/vnd.ms-excel")
     response["Content-Disposition"] = 'attachment; filename="inventario.xlsx"'
     df.to_excel(response, index=False)
+
+    return response
+
+@login_required
+def facturacion(request):
+    productos = Producto.objects.all().order_by("nombre_producto")
+    return render(request, "facturacion.html", {"productos": productos})
+
+@login_required
+def registrar_factura(request):
+    if request.method == "POST":
+        datos = json.loads(request.body)
+
+        cliente = datos.get("cliente")
+        items = datos.get("items")
+        total = datos.get("total")
+
+        factura = Factura.objects.create(
+            cliente=cliente,
+            total=total
+        )
+
+        for item in items:
+            producto = Producto.objects.get(id=item["id"])
+            cantidad = int(item["cantidad"])
+
+            # descontar stock
+            producto.stock_actual -= cantidad
+            producto.en_alerta_stock = producto.stock_actual <= producto.stock_minimo
+            producto.save()
+
+            # crear detalle
+            DetalleFactura.objects.create(
+                factura=factura,
+                producto=producto,
+                cantidad=cantidad,
+                precio=item["precio"],
+                subtotal=item["subtotal"]
+            )
+
+        return JsonResponse({
+            "status": "ok",
+            "factura_id": factura.id
+        })
+
+    return JsonResponse({"status": "error"})
+
+@login_required
+def factura_pdf(request, id):
+    factura = Factura.objects.get(id=id)
+    detalles = factura.detalles.all()
+
+    html = render_to_string("factura_pdf.html", {
+        "factura": factura,
+        "detalles": detalles
+    })
+
+    response = HttpResponse(content_type="application/pdf")
+    response['Content-Disposition'] = f'attachment; filename="factura_{id}.pdf"'
+    pisa_status = pisa.CreatePDF(html, dest=response)
 
     return response

@@ -48,6 +48,9 @@
             <a href="{% url 'perfil' %}" class="sidebar-btn">🧾 Mi ficha</a>
             <a href="{% url 'inventario_lista' %}" class="sidebar-btn">📦 Inventario</a>
             <a href="{% url 'lista_usuarios' %}" class="sidebar-btn">👥 Gestión de usuarios</a>
+            <!-- 🔽🔽🔽 NUEVO — AGREGAR FACTURACIÓN AL MENÚ 🔽🔽🔽 -->
+            <a href="{% url 'facturacion' %}" class="sidebar-btn">🧾 Facturación </a>
+
 
             <!-- BOTÓN PARA ABRIR EL POP-UP -->
             <a href="#" class="sidebar-btn"
@@ -55,7 +58,9 @@
                data-bs-target="#modalCargaDatos">
                 📁 Carga Excel
             </a>
+            
         </nav>
+        
     </aside>
 
     <main class="content-area">
