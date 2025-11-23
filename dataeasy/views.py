@@ -6,7 +6,7 @@ import pandas as pd
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.paginator import Paginator
@@ -15,7 +15,7 @@ from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.http import HttpResponse, JsonResponse
-from xhtml2pdf import pisa 
+from xhtml2pdf import pisa
 from django.template.loader import render_to_string
 
 from .models import Producto, Categoria, Marca, MovimientoInventario
@@ -43,9 +43,16 @@ def index(request):
 
 
 # ============================================================
-# 3. HOME (Admin único)
+# 3. ACCESO DENEGADO
 # ============================================================
-@login_required
+def acceso_denegado(request):
+    return render(request, "acceso_denegado.html")
+
+
+# ============================================================
+# 4. HOME (Admin único)
+# ============================================================
+@login_required(login_url="index")
 def home(request):
 
     # Construimos contexto general
@@ -60,23 +67,24 @@ def home(request):
     return render(request, "home.html", context)
 
 
-@login_required
+@login_required(login_url="index")
 def perfil(request):
     return render(request, "perfil.html")
 
 
-@login_required
+@login_required(login_url="index")
 def configuracion(request):
     return render(request, "configuracion.html")
 
 
 def recuperacion(request):
     return render(request, "recuperacion.html")
+
+
 # ============================================================
 # INVENTARIO
 # ============================================================
-
-@login_required
+@login_required(login_url="index")
 def lista_inventario(request):
     query = request.GET.get("q", "")
     solo_alertas = request.GET.get("solo_alertas") == "1"
@@ -121,8 +129,7 @@ def lista_inventario(request):
 # ============================================================
 # CREAR PRODUCTO
 # ============================================================
-
-@login_required
+@login_required(login_url="index")
 def crear_producto(request):
     if request.method == "POST":
         categoria = Categoria.objects.filter(id=request.POST.get("categoria")).first()
@@ -146,8 +153,7 @@ def crear_producto(request):
 # ============================================================
 # EDITAR PRODUCTO
 # ============================================================
-
-@login_required
+@login_required(login_url="index")
 def editar_producto(request, id_producto):
     producto = get_object_or_404(Producto, id=id_producto)
 
@@ -169,8 +175,7 @@ def editar_producto(request, id_producto):
 # ============================================================
 # ELIMINAR PRODUCTO
 # ============================================================
-
-@login_required
+@login_required(login_url="index")
 def eliminar_producto(request, id_producto):
     producto = get_object_or_404(Producto, id=id_producto)
     producto.delete()
@@ -178,24 +183,23 @@ def eliminar_producto(request, id_producto):
     return redirect("inventario_lista")
 
 
-
 # ============================================================
 # 5. USUARIOS (ADMIN)
 # ============================================================
-def admin_required(view_func):
-    return login_required(view_func)
+def es_admin(user):
+    return user.is_superuser
 
 
-@login_required
-@admin_required
+@login_required(login_url="index")
+@user_passes_test(es_admin, login_url="acceso_denegado")
 def lista_usuarios(request):
     return render(request, "gestion_usuarios.html", {
         "lista_usuarios": User.objects.all()
     })
 
 
-@login_required
-@admin_required
+@login_required(login_url="index")
+@user_passes_test(es_admin, login_url="acceso_denegado")
 def crear_usuario(request):
     if request.method == "POST":
         form = UserCreateForm(request.POST)
@@ -210,8 +214,8 @@ def crear_usuario(request):
     return render(request, "usuario_form.html", {"form": form})
 
 
-@login_required
-@admin_required
+@login_required(login_url="index")
+@user_passes_test(es_admin, login_url="acceso_denegado")
 def editar_usuario(request, pk):
     usuario = get_object_or_404(User, pk=pk)
     form = UserUpdateForm(request.POST or None, instance=usuario)
@@ -224,8 +228,8 @@ def editar_usuario(request, pk):
     return render(request, "usuario_form.html", {"form": form})
 
 
-@login_required
-@admin_required
+@login_required(login_url="index")
+@user_passes_test(es_admin, login_url="acceso_denegado")
 def eliminar_usuario(request, pk):
     usuario = get_object_or_404(User, pk=pk)
     if usuario.is_superuser:
@@ -331,7 +335,7 @@ def _build_estadisticas_context(request):
     }
 
 
-@login_required
+@login_required(login_url="index")
 def estadisticas(request):
     return render(request, "estadisticas.html", _build_estadisticas_context(request))
 
@@ -339,7 +343,7 @@ def estadisticas(request):
 # ============================================================
 # 7. CARGA MASIVA DE PRODUCTOS
 # ============================================================
-@login_required
+@login_required(login_url="index")
 def carga_datos(request):
 
     if request.method == "POST" and request.FILES.get("archivo_excel"):
@@ -404,7 +408,7 @@ def carga_datos(request):
 # ============================================================
 # 8. EXPORTAR EXCEL
 # ============================================================
-@login_required
+@login_required(login_url="index")
 def exportar_excel(request):
 
     productos = Producto.objects.select_related("categoria", "marca")
@@ -442,12 +446,17 @@ def exportar_excel(request):
 
     return response
 
-@login_required
+
+# ============================================================
+# 9. FACTURACIÓN
+# ============================================================
+@login_required(login_url="index")
 def facturacion(request):
     productos = Producto.objects.all().order_by("nombre_producto")
     return render(request, "facturacion.html", {"productos": productos})
 
-@login_required
+
+@login_required(login_url="index")
 def registrar_factura(request):
     if request.method == "POST":
         datos = json.loads(request.body)
@@ -486,7 +495,8 @@ def registrar_factura(request):
 
     return JsonResponse({"status": "error"})
 
-@login_required
+
+@login_required(login_url="index")
 def factura_pdf(request, id):
     factura = Factura.objects.get(id=id)
     detalles = factura.detalles.all()
