@@ -15,15 +15,16 @@ urlpatterns = [
 
     # --- Gestión de Inventario ---
     path('inventario/', views.lista_inventario, name='inventario_lista'),
+    path('inventario/nuevo/', views.crear_producto, name='inventario_nuevo'),
     path('inventario/editar/<int:id_producto>/', views.editar_producto, name='inventario_editar'),
     path('inventario/eliminar/<int:id_producto>/', views.eliminar_producto, name='inventario_eliminar'),
-
     path('inventario/exportar/', views.exportar_excel, name='exportar_excel'),
+
+
+        
     
     # NUEVO: crear producto
     path('inventario/nuevo/', views.crear_producto, name='inventario_nuevo'),
-
-    # --- Gestión de Usuarios ---
 
 
     # --- Gestión de Usuarios ---vene
@@ -38,20 +39,18 @@ urlpatterns = [
     path('estadisticas/', views.estadisticas, name='estadisticas'),
     path('carga_datos/', views.carga_datos, name='carga_datos'),
 
+    # --- FACTURACIÓN ---
+    path('facturacion/', views.facturacion, name='facturacion'),
+    path('facturacion/registrar/', views.registrar_factura, name='registrar_factura'),
+    path('facturacion/pdf/<int:id>/', views.factura_pdf, name='factura_pdf'),
 
 
-    # Auditor
-    path('auditor/home/', views.auditor_home, name='auditor_home'),
-    path('auditor/perfil/', views.auditor_perfil, name='auditor_perfil'),
-    path('auditor/usuarios/', views.auditor_usuarios, name='auditor_usuarios'),
-    path('auditor/estadisticas/', views.auditor_estadisticas, name='auditor_estadisticas'),
-    path('auditor/carga-datos/', views.auditor_carga_datos, name='auditor_carga_datos'),
 
 
-    # --- Rutas Rol Inventario ---
 
-    path('inv/home/', views.inv_home, name='inv_home'),
-    path('inv/perfil/', views.inv_perfil, name='inv_perfil'),
-    path('inv/lista/', views.inv_inventario, name='inv_inventario'),
-    path('inv/carga_datos/', views.inv_carga_datos, name='inv_carga_datos'),
+
+
+    path('acceso-denegado/', views.acceso_denegado, name='acceso_denegado'),
+
+
 ]

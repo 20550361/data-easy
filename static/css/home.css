@@ -1,0 +1,101 @@
+/* ===========================================
+   HEADER
+===========================================*/
+.home-header {
+  margin-bottom: 12px;
+}
+.home-title {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+.home-subtitle {
+  margin: 0;
+  color: #6b7280;
+}
+
+/* ===========================================
+   TARJETAS
+===========================================*/
+.stats-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.stat-card {
+  background: #fff;
+  padding: 18px;
+  border-radius: 10px;
+  box-shadow: var(--sombra-ligera);
+}
+.stat-card h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+.stat-card .value {
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+/* ===========================================
+   GRÁFICOS
+===========================================*/
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.chart-container {
+  background: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  min-height: 380px;
+  box-shadow: var(--sombra-ligera);
+}
+.small-chart canvas {
+  height: 320px !important;
+}
+
+/* MOVIMIENTOS MÁS ESTRECHO */
+#movimientosMesChart {
+  width: 85% !important;
+  margin: 0 auto;
+}
+
+/* ===========================================
+   LISTAS
+===========================================*/
+.low-stock-lists {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  margin-top: 16px;
+}
+.stock-list-container {
+  background: #fff;
+  padding: 16px;
+  border-radius: 10px;
+  box-shadow: var(--sombra-ligera);
+}
+
+/* ===========================================
+   ALERTA FLOTANTE
+===========================================*/
+.alerta-stock {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  background: #ffcc00;
+  padding: 16px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  cursor: grab;
+  max-width: 330px;
+  z-index: 9999;
+}
+.alerta-stock:active { cursor: grabbing; }
+.alerta-stock-list { padding-left: 0; list-style: none; }
+.alerta-stock-list li { margin-bottom: 4px; }
+.alerta-stock-link { font-size: 0.8rem; }

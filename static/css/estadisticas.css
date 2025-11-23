@@ -76,32 +76,41 @@
     gap: 30px;
     margin-bottom: 30px;
 }
-
 .chart-container {
     background-color: #ffffff;
     padding: 20px;
     border-radius: 8px;
     box-shadow: var(--sombra-ligera);
-    /* --- FIXED SIZE --- */
-    height: 350px; /* Set a fixed height (adjust as needed) */
-    position: relative; /* Needed for Chart.js responsiveness */
+    
+    /* 🔥 Nuevo diseño */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+
+    height: auto; /* Quita altura fija */
 }
 
+/* 🔥 Título arriba centrado */
 .chart-container h3 {
     margin-top: 0;
-    text-align: center;
     margin-bottom: 15px;
-    color: #333;
+    text-align: center;
+    width: 100%;
 }
 
-/* Ensure canvas doesn't overflow and respects container */
+/* 🔥 Reducción solo para gráfico de pastel */
+.chart-container:nth-child(2) canvas {
+    max-width: 260px !important;
+    max-height: 260px !important;
+}
+
+/* Para los otros gráficos: mantienen su tamaño full */
 .chart-container canvas {
-    max-width: 100%;
-    max-height: 100%;
-    /* Remove explicit width/height if set in HTML */
-    width: auto !important;
+    width: 100% !important;
     height: auto !important;
 }
+
 
 
 /* === Low Stock Lists === */
