@@ -3,6 +3,7 @@ import json
 import csv
 from datetime import datetime, timedelta
 import pandas as pd
+import unicodedata
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
@@ -17,6 +18,9 @@ from django.contrib.auth.models import User
 from django.http import HttpResponse, JsonResponse
 from xhtml2pdf import pisa
 from django.template.loader import render_to_string
+from django.db.models.functions import TruncMonth, TruncWeek, TruncDay
+import locale
+from django.http import JsonResponse
 
 from .models import Producto, Categoria, Marca, MovimientoInventario
 from .forms import UserCreateForm, UserUpdateForm
@@ -296,6 +300,44 @@ def _build_estadisticas_context(request):
             entradas[idx] = row["total"]
         else:
             salidas[idx] = row["total"]
+            
+
+    # Diccionario categorias
+    cat_map = {}
+    for p in productos_bajo:
+        cat_name = p.categoria.nombre_categoria if p.categoria else "Sin categoría"
+        if cat_name not in cat_map:
+            cat_map[cat_name] = []
+        cat_map[cat_name].append(p.nombre_producto)
+
+
+    cat_labels = list(cat_map.keys())
+    cat_values = [len(prods) for prods in cat_map.values()]
+    cat_tooltips = [] 
+    
+    for prods in cat_map.values():
+        lista_formateada = prods[:5] 
+        if len(prods) > 5:
+            lista_formateada.append(f"... y {len(prods)-5} más")
+        cat_tooltips.append(lista_formateada)
+
+    marca_map = {}
+    for p in productos_bajo:
+        marca_name = p.marca.nombre_marca if p.marca else "Sin marca"
+        if marca_name not in marca_map:
+            marca_map[marca_name] = []
+        marca_map[marca_name].append(p.nombre_producto)
+
+    marca_labels = list(marca_map.keys())
+    marca_values = [len(prods) for prods in marca_map.values()]
+    marca_tooltips = []
+
+    for prods in marca_map.values():
+        lista_formateada = prods[:5]
+        if len(prods) > 5:
+            lista_formateada.append(f"... y {len(prods)-5} más")
+        marca_tooltips.append(lista_formateada)
+
 
     chart_data = {
         "meses": meses,
@@ -311,15 +353,43 @@ def _build_estadisticas_context(request):
             for c in Producto.objects.values("categoria__nombre_categoria")
             .annotate(total=Sum("stock_actual"))
         ],
+        
+        "stock_critico_categoria_labels": [
+            r["categoria__nombre_categoria"] or "Sin categoría"
+            for r in productos_bajo.values("categoria__nombre_categoria").annotate(cantidad=Count("id")).order_by("-cantidad")
+        ],
+        "stock_critico_categoria_values": [
+            r["cantidad"]
+            for r in productos_bajo.values("categoria__nombre_categoria").annotate(cantidad=Count("id")).order_by("-cantidad")
+        ],
+        # Datos para Gráfico de Barras (Crítico por MARCA)
         "stock_critico_marca_labels": [
-            r["marca__nombre_marca"]
-            for r in productos_bajo.values("marca__nombre_marca").annotate(cantidad=Count("id"))
+            r["marca__nombre_marca"] or "Sin marca"
+            for r in productos_bajo.values("marca__nombre_marca").annotate(cantidad=Count("id")).order_by("-cantidad")
         ],
         "stock_critico_marca_values": [
             r["cantidad"]
-            for r in productos_bajo.values("marca__nombre_marca").annotate(cantidad=Count("id"))
+            for r in productos_bajo.values("marca__nombre_marca").annotate(cantidad=Count("id")).order_by("-cantidad")
         ],
+        #  Datos para Gráfico de Torta (Marcas) 
+        "stock_por_marca_labels": [
+            m["marca__nombre_marca"] or "Sin marca"
+            for m in Producto.objects.values("marca__nombre_marca").annotate(total=Sum("stock_actual"))
+        ],
+        "stock_por_marca_values": [
+            m["total"]
+            for m in Producto.objects.values("marca__nombre_marca").annotate(total=Sum("stock_actual"))
+        ],
+ # --- DATOS NUEVOS CON DETALLE ---
+        "stock_critico_categoria_labels": cat_labels,
+        "stock_critico_categoria_values": cat_values,
+        "stock_critico_categoria_tooltips": cat_tooltips,
+
+        "stock_critico_marca_labels": marca_labels,
+        "stock_critico_marca_values": marca_values,
+        "stock_critico_marca_tooltips": marca_tooltips, 
     }
+
 
     return {
         "fecha_inicio": fecha_inicio,
@@ -340,68 +410,146 @@ def estadisticas(request):
     return render(request, "estadisticas.html", _build_estadisticas_context(request))
 
 
+@login_required(login_url="index")
+def chart_data_api(request):
+    rango = request.GET.get('rango', 'mes') # mes, semana, dia
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
+    
+    # 1. Fechas por defecto (últimos 6 meses)
+    hoy = timezone.now().date()
+    if not fecha_inicio:
+        fecha_inicio = hoy - timedelta(days=180)
+    else:
+        fecha_inicio = datetime.strptime(fecha_inicio, "%Y-%m-%d").date()
+        
+    if not fecha_fin:
+        fecha_fin = hoy
+    else:
+        fecha_fin = datetime.strptime(fecha_fin, "%Y-%m-%d").date()
+
+    # 2. Definir agrupación según el rango seleccionado
+    if rango == 'semana':
+        trunc_func = TruncWeek('fecha_movimiento')
+    elif rango == 'dia':
+        trunc_func = TruncDay('fecha_movimiento')
+        if (fecha_fin - fecha_inicio).days > 60: 
+            fecha_inicio = fecha_fin - timedelta(days=30)
+    else:
+        trunc_func = TruncMonth('fecha_movimiento')
+
+    # 3. Consulta a la BD
+    qs = MovimientoInventario.objects.filter(
+        fecha_movimiento__date__range=[fecha_inicio, fecha_fin]
+    ).annotate(
+        periodo=trunc_func
+    ).values(
+        'periodo', 'tipo_movimiento'
+    ).annotate(
+        total=Sum('cantidad')
+    ).order_by('periodo')
+
+    # 4. Procesar datos en Python
+    data_map = {}
+
+    for row in qs:
+        fecha_obj = row['periodo']
+        
+        if rango == 'semana':
+            label = f"Semana {fecha_obj.strftime('%W')}"
+        elif rango == 'dia':
+            label = fecha_obj.strftime('%d/%m')
+        else:
+            label = fecha_obj.strftime('%b-%Y')
+
+        if label not in data_map:
+            data_map[label] = {'entradas': 0, 'salidas': 0}
+        
+        if row['tipo_movimiento'] == 'entrada':
+            data_map[label]['entradas'] += row['total']
+        elif row['tipo_movimiento'] == 'salida':
+            data_map[label]['salidas'] += row['total']
+
+    labels = list(data_map.keys())
+    entradas = [data_map[k]['entradas'] for k in labels]
+    salidas = [data_map[k]['salidas'] for k in labels]
+
+    return JsonResponse({
+        "labels": labels,
+        "entradas": entradas,
+        "salidas": salidas
+    })
+
 # ============================================================
 # 7. CARGA MASIVA DE PRODUCTOS
 # ============================================================
 @login_required(login_url="index")
 def carga_datos(request):
 
-    if request.method == "POST" and request.FILES.get("archivo_excel"):
-
-        next_url = request.POST.get("next") or "home"
-        archivo = request.FILES["archivo_excel"]
-
-        columnas = ["nombre_producto", "categoria", "marca", "descripcion", "stock_actual", "stock_minimo"]
+    if request.method == "POST":
+        if not request.FILES.get("archivo_excel"):
+            return JsonResponse({"status": "error", "message": "No seleccionaste ningún archivo."})
 
         try:
+            archivo = request.FILES["archivo_excel"]
+            
+            # Leemos el Excel
             df = pd.read_excel(archivo)
-            df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
 
-            faltantes = [c for c in columnas if c not in df.columns]
-            if faltantes:
-                messages.error(request, "Faltan columnas: " + ", ".join(faltantes))
-                return redirect(next_url)
+            # Función de limpieza rápida
+            def limpiar(txt):
+                return str(txt).strip().lower().replace(" ", "_").replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u")
 
+            # Normalizar columnas
+            df.columns = [limpiar(c) for c in df.columns]
+
+            # Validar columnas mínimas
+            cols_ok = ["nombre_producto", "categoria", "marca", "stock_actual"]
+            faltan = [c for c in cols_ok if c not in df.columns]
+
+            if faltan:
+                return JsonResponse({"status": "error", "message": f"Faltan columnas en el Excel: {', '.join(faltan)}"})
+
+            # Procesar filas
+            count = 0
             nuevos = 0
-            actualizados = 0
-
             for _, row in df.iterrows():
+                if pd.isna(row.get("nombre_producto")): continue
+                
+                # Crear/Buscar Categoria y Marca
+                cat_obj = None
+                if pd.notna(row.get("categoria")):
+                    cat_obj, _ = Categoria.objects.get_or_create(nombre_categoria=str(row["categoria"]).strip())
+                
+                marca_obj = None
+                if pd.notna(row.get("marca")):
+                    marca_obj, _ = Marca.objects.get_or_create(nombre_marca=str(row["marca"]).strip())
 
-                nombre = row.get("nombre_producto")
-                if not nombre:
-                    continue
-
-                categoria = Categoria.objects.get_or_create(
-                    nombre_categoria=row.get("categoria")
-                )[0] if row.get("categoria") else None
-
-                marca = Marca.objects.get_or_create(
-                    nombre_marca=row.get("marca")
-                )[0] if row.get("marca") else None
-
-                producto, creado = Producto.objects.update_or_create(
-                    nombre_producto=nombre,
+                # Crear/Actualizar Producto
+                _, created = Producto.objects.update_or_create(
+                    nombre_producto=row["nombre_producto"],
                     defaults={
-                        "descripcion": row.get("descripcion", ""),
-                        "categoria": categoria,
-                        "marca": marca,
-                        "stock_minimo": int(row.get("stock_minimo", 0)),
+                        "categoria": cat_obj,
+                        "marca": marca_obj,
                         "stock_actual": int(row.get("stock_actual", 0)),
+                        "stock_minimo": int(row.get("stock_minimo", 5)),
+                        "descripcion": row.get("descripcion", "")
                     }
                 )
-
-                if creado:
-                    nuevos += 1
-                else:
-                    actualizados += 1
-
-            messages.success(request, f"Carga completada: {nuevos} nuevos, {actualizados} actualizados.")
+                count += 1
+                if created: nuevos += 1
+            
+            # --- RESPUESTA DE ÉXITO ---
+            return JsonResponse({
+                "status": "success", 
+                "message": f"¡Proceso finalizado! {count} productos procesados ({nuevos} nuevos)."
+            })
 
         except Exception as e:
-            messages.error(request, f"Error procesando archivo: {e}")
+            # --- RESPUESTA DE ERROR ---
+            return JsonResponse({"status": "error", "message": f"Error interno: {str(e)}"})
 
-        return redirect(next_url)
-
+    # Si entran por URL directa, mostramos el HTML normal
     return render(request, "carga_datos.html")
 
 

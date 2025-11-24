@@ -99,38 +99,92 @@
 
       <div class="modal-body">
 
-        <!-- FORMULARIO DE CARGA -->
-        <form id="formExcel" method="post" enctype="multipart/form-data"
-              action="{% url 'carga_datos' %}">
-
+        <form id="formExcelAjax" method="post" enctype="multipart/form-data">
             {% csrf_token %}
+            
+            <label class="form-label text-muted">
+                Columnas requeridas: <strong>nombre_producto, categoria, marca, stock_actual</strong>
+            </label>
 
-            <input type="hidden" name="next" value="{{ request.path }}">
+            <input type="file" class="form-control mb-3" name="archivo_excel" id="archivo_excel_input" accept=".xlsx,.xls" required>
 
-            <label class="form-label">Selecciona archivo Excel con: nombre_producto, categoria, marca, descripcion, stock_actual, stock_minimo</label>
-
-            <input type="file" class="form-control" name="archivo_excel"
-                   id="archivo_excel" accept=".xlsx,.xls" required>
-
-            <!-- BARRA DE PROGRESO -->
-            <div id="progressContainer" class="mt-3" style="display:none;">
-                <div class="progress">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated"
-                         id="progressBar" style="width: 0%;">
-                    </div>
-                </div>
+            <div id="uploadProgress" class="progress mb-3" style="display:none;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%">Procesando...</div>
             </div>
 
-            <button type="submit" class="btn btn-primary w-100 mt-3">
-                Subir datos
-            </button>
+            <div id="uploadFeedback" style="display:none;" class="alert"></div>
 
+            <button type="submit" class="btn btn-primary w-100" id="btnSubirExcel">
+                🔥 Subir datos
+            </button>
         </form>
 
       </div>
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const form = document.getElementById("formExcelAjax");
+    const feedback = document.getElementById("uploadFeedback");
+    const progress = document.getElementById("uploadProgress");
+    const btn = document.getElementById("btnSubirExcel");
+
+    if(form){
+        form.addEventListener("submit", function(e) {
+            e.preventDefault(); // 1. Evitamos recargar la página
+
+            // Limpieza visual
+            feedback.style.display = "none";
+            feedback.className = "alert"; // Reset de clases
+            progress.style.display = "block"; // Mostrar barra
+            btn.disabled = true; // Desactivar botón para evitar doble clic
+
+            // Preparar datos
+            const formData = new FormData(form);
+
+            // 2. Enviar petición al servidor
+            fetch("{% url 'carga_datos' %}", {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                progress.style.display = "none";
+                btn.disabled = false;
+                feedback.style.display = "block";
+
+                if (data.status === "success") {
+                    // ÉXITO: Verde
+                    feedback.classList.add("alert-success");
+                    feedback.innerHTML = `✅ <strong>¡Listo!</strong> ${data.message}`;
+                    
+                    // Opcional: Recargar la página después de 2 segundos para ver los cambios
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    // ERROR: Rojo
+                    feedback.classList.add("alert-danger");
+                    feedback.innerHTML = `❌ <strong>Error:</strong> ${data.message}`;
+                }
+            })
+            .catch(error => {
+                progress.style.display = "none";
+                btn.disabled = false;
+                feedback.style.display = "block";
+                feedback.classList.add("alert-danger");
+                feedback.innerHTML = "❌ Error de conexión con el servidor.";
+                console.error("Error:", error);
+            });
+        });
+    }
+});
+</script>
 
 
 <!-- ======================================================== -->
