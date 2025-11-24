@@ -79,8 +79,6 @@ def configuracion(request):
 
 def recuperacion(request):
     return render(request, "recuperacion.html")
-
-
 # ============================================================
 # INVENTARIO
 # ============================================================
@@ -90,7 +88,8 @@ def lista_inventario(request):
     solo_alertas = request.GET.get("solo_alertas") == "1"
 
     productos = Producto.objects.select_related("categoria", "marca").all()
-
+    
+    # BUSCADOR DE TEXTO
     if query:
         productos = productos.filter(
             Q(nombre_producto__icontains=query) |
@@ -98,16 +97,31 @@ def lista_inventario(request):
             Q(marca__nombre_marca__icontains=query)
         )
 
+    # ==========================================
+    # FILTROS NUEVOS: Categoría y Marca
+    # ==========================================
+    f_categoria = request.GET.get("f_categoria")
+    f_marca = request.GET.get("f_marca")
+
+    if f_categoria:
+        productos = productos.filter(categoria_id=f_categoria)
+
+    if f_marca:
+        productos = productos.filter(marca_id=f_marca)
+
+    # FILTRO SOLO ALERTAS
     if solo_alertas:
         productos = productos.filter(
             Q(stock_actual=0) |
             Q(stock_actual__gt=0, stock_actual__lte=F("stock_minimo"))
         )
 
+    # QUERYSET DE ALERTAS GENERAL
     alertas_qs = Producto.objects.filter(
         Q(stock_actual=0) | Q(stock_actual__gt=0, stock_actual__lte=F("stock_minimo"))
     )
 
+    # PAGINACIÓN
     paginator = Paginator(productos.order_by("nombre_producto"), 20)
     page_obj = paginator.get_page(request.GET.get("page"))
 
@@ -119,13 +133,13 @@ def lista_inventario(request):
         "solo_alertas": solo_alertas,
         "total_alertas": alertas_qs.count(),
         "total_productos": Producto.objects.count(),
+
+        # Listas para el modal de alerta global
         "sin_stock_items": alertas_qs.filter(stock_actual=0),
         "bajo_stock_items": alertas_qs.filter(stock_actual__gt=0),
     }
 
     return render(request, "inventario.html", context)
-
-
 # ============================================================
 # CREAR PRODUCTO
 # ============================================================
@@ -177,12 +191,11 @@ def editar_producto(request, id_producto):
 # ============================================================
 @login_required(login_url="index")
 def eliminar_producto(request, id_producto):
+
     producto = get_object_or_404(Producto, id=id_producto)
     producto.delete()
     messages.success(request, "Producto eliminado.")
     return redirect("inventario_lista")
-
-
 # ============================================================
 # 5. USUARIOS (ADMIN)
 # ============================================================
@@ -239,8 +252,6 @@ def eliminar_usuario(request, pk):
     usuario.delete()
     messages.success(request, "Usuario eliminado.")
     return redirect("lista_usuarios")
-
-
 # ============================================================
 # 6. ESTADÍSTICAS
 # ============================================================
@@ -304,12 +315,12 @@ def _build_estadisticas_context(request):
         "stock_por_categoria_labels": [
             c["categoria__nombre_categoria"] or "Sin categoría"
             for c in Producto.objects.values("categoria__nombre_categoria")
-            .annotate(total=Sum("stock_actual"))
+                .annotate(total=Sum("stock_actual"))
         ],
         "stock_por_categoria_values": [
             c["total"]
             for c in Producto.objects.values("categoria__nombre_categoria")
-            .annotate(total=Sum("stock_actual"))
+                .annotate(total=Sum("stock_actual"))
         ],
         "stock_critico_marca_labels": [
             r["marca__nombre_marca"]
@@ -445,8 +456,6 @@ def exportar_excel(request):
     df.to_excel(response, index=False)
 
     return response
-
-
 # ============================================================
 # 9. FACTURACIÓN
 # ============================================================
