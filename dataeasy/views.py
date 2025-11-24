@@ -265,7 +265,7 @@ def _build_estadisticas_context(request):
     )
 
     # ========== Datos generales ==========
-    productos_bajo = Producto.objects.filter(stock_actual__lt=F("stock_minimo"))
+    productos_bajo = Producto.objects.filter(stock_actual__gt=0, stock_actual__lte=F("stock_minimo"))
     productos_sin = Producto.objects.filter(stock_actual=0)
 
     # ========== Gráficos ==========
@@ -449,7 +449,7 @@ def exportar_excel(request):
 
 # ============================================================
 # 9. FACTURACIÓN
-# ============================================================
+# ===============================   =============================
 @login_required(login_url="index")
 def facturacion(request):
     productos = Producto.objects.all().order_by("nombre_producto")
