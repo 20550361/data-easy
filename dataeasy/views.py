@@ -249,7 +249,6 @@ def eliminar_usuario(request, pk):
 # 6. ESTADÍSTICAS
 # ============================================================
 def _build_estadisticas_context(request):
-
     fecha_inicio = request.GET.get("fecha_inicio")
     fecha_fin = request.GET.get("fecha_fin")
     hoy = timezone.now().date()
@@ -257,7 +256,7 @@ def _build_estadisticas_context(request):
     if fecha_inicio:
         fecha_inicio = datetime.strptime(fecha_inicio, "%Y-%m-%d").date()
     else:
-        fecha_inicio = hoy - timedelta(days=180)
+        fecha_inicio = hoy - timedelta(days=180) 
 
     if fecha_fin:
         fecha_fin = datetime.strptime(fecha_fin, "%Y-%m-%d").date()
@@ -268,11 +267,54 @@ def _build_estadisticas_context(request):
         fecha_movimiento__date__range=[fecha_inicio, fecha_fin]
     )
 
-    # ========== Datos generales ==========
-    productos_bajo = Producto.objects.filter(stock_actual__gt=0, stock_actual__lte=F("stock_minimo"))
-    productos_sin = Producto.objects.filter(stock_actual=0)
+    productos_criticos_total = Producto.objects.filter(
+        stock_actual__lte=F("stock_minimo")
+    ).select_related('categoria', 'marca')
 
-    # ========== Gráficos ==========
+
+    productos_sin = productos_criticos_total.filter(stock_actual=0)
+    productos_bajo = productos_criticos_total.filter(stock_actual__gt=0)
+
+    critico_cat_map = {}
+    critico_cat_nombres = {}
+
+    for p in productos_criticos_total:
+        cat_name = p.categoria.nombre_categoria if p.categoria else "Sin categoría"
+        
+        if cat_name not in critico_cat_map:
+            critico_cat_map[cat_name] = 0
+            critico_cat_nombres[cat_name] = []
+        
+        critico_cat_map[cat_name] += 1
+        estado = "(0)" if p.stock_actual == 0 else f"({p.stock_actual}/{p.stock_minimo})"
+        critico_cat_nombres[cat_name].append(f"{p.nombre_producto} {estado}")
+
+
+    critico_marca_map = {}
+    critico_marca_nombres = {}
+
+    for p in productos_criticos_total:
+        marca_name = p.marca.nombre_marca if p.marca else "Sin marca"
+        
+        if marca_name not in critico_marca_map:
+            critico_marca_map[marca_name] = 0
+            critico_marca_nombres[marca_name] = []
+            
+        critico_marca_map[marca_name] += 1
+        estado = "(0)" if p.stock_actual == 0 else f"({p.stock_actual}/{p.stock_minimo})"
+        critico_marca_nombres[marca_name].append(f"{p.nombre_producto} {estado}")
+
+
+    def preparar_tooltip(lista_nombres):
+        resultado = []
+        for nombres in lista_nombres:
+            recorte = nombres[:5]
+            if len(nombres) > 5:
+                recorte.append(f"... y {len(nombres)-5} más")
+            resultado.append(recorte)
+        return resultado
+
+
     movimientos_por_mes = (
         movimientos.annotate(mes=TruncMonth("fecha_movimiento"))
         .values("mes", "tipo_movimiento")
@@ -283,6 +325,7 @@ def _build_estadisticas_context(request):
     meses = []
     entradas = []
     salidas = []
+    
 
     curr = fecha_inicio.replace(day=1)
     while curr <= fecha_fin:
@@ -290,88 +333,36 @@ def _build_estadisticas_context(request):
         meses.append(key)
         entradas.append(0)
         salidas.append(0)
-        curr = (curr + timedelta(days=32)).replace(day=1)
+
+        next_month = curr.replace(day=28) + timedelta(days=4)
+        curr = next_month.replace(day=1)
+
 
     for row in movimientos_por_mes:
-        m = row["mes"].strftime("%Y-%m")
-        idx = meses.index(m)
-
-        if row["tipo_movimiento"] == "entrada":
-            entradas[idx] = row["total"]
-        else:
-            salidas[idx] = row["total"]
-            
-
-    # Diccionario categorias
-    cat_map = {}
-    for p in productos_bajo:
-        cat_name = p.categoria.nombre_categoria if p.categoria else "Sin categoría"
-        if cat_name not in cat_map:
-            cat_map[cat_name] = []
-        cat_map[cat_name].append(p.nombre_producto)
-
-
-    cat_labels = list(cat_map.keys())
-    cat_values = [len(prods) for prods in cat_map.values()]
-    cat_tooltips = [] 
-    
-    for prods in cat_map.values():
-        lista_formateada = prods[:5] 
-        if len(prods) > 5:
-            lista_formateada.append(f"... y {len(prods)-5} más")
-        cat_tooltips.append(lista_formateada)
-
-    marca_map = {}
-    for p in productos_bajo:
-        marca_name = p.marca.nombre_marca if p.marca else "Sin marca"
-        if marca_name not in marca_map:
-            marca_map[marca_name] = []
-        marca_map[marca_name].append(p.nombre_producto)
-
-    marca_labels = list(marca_map.keys())
-    marca_values = [len(prods) for prods in marca_map.values()]
-    marca_tooltips = []
-
-    for prods in marca_map.values():
-        lista_formateada = prods[:5]
-        if len(prods) > 5:
-            lista_formateada.append(f"... y {len(prods)-5} más")
-        marca_tooltips.append(lista_formateada)
+        if row["mes"]:
+            m = row["mes"].strftime("%Y-%m")
+            if m in meses:
+                idx = meses.index(m)
+                if row["tipo_movimiento"] == "entrada":
+                    entradas[idx] = row["total"]
+                else:
+                    salidas[idx] = row["total"]
 
 
     chart_data = {
         "meses": meses,
         "entradas": entradas,
         "salidas": salidas,
+        
+        # --- GRAFICOS DE PASTEL (DISTRIBUCIÓN) ---
         "stock_por_categoria_labels": [
             c["categoria__nombre_categoria"] or "Sin categoría"
-            for c in Producto.objects.values("categoria__nombre_categoria")
-            .annotate(total=Sum("stock_actual"))
+            for c in Producto.objects.values("categoria__nombre_categoria").annotate(total=Sum("stock_actual"))
         ],
         "stock_por_categoria_values": [
             c["total"]
-            for c in Producto.objects.values("categoria__nombre_categoria")
-            .annotate(total=Sum("stock_actual"))
+            for c in Producto.objects.values("categoria__nombre_categoria").annotate(total=Sum("stock_actual"))
         ],
-        
-        "stock_critico_categoria_labels": [
-            r["categoria__nombre_categoria"] or "Sin categoría"
-            for r in productos_bajo.values("categoria__nombre_categoria").annotate(cantidad=Count("id")).order_by("-cantidad")
-        ],
-        "stock_critico_categoria_values": [
-            r["cantidad"]
-            for r in productos_bajo.values("categoria__nombre_categoria").annotate(cantidad=Count("id")).order_by("-cantidad")
-        ],
-        # Datos para Gráfico de Barras (Crítico por MARCA)
-        "stock_critico_marca_labels": [
-            r["marca__nombre_marca"] or "Sin marca"
-            for r in productos_bajo.values("marca__nombre_marca").annotate(cantidad=Count("id")).order_by("-cantidad")
-        ],
-        "stock_critico_marca_values": [
-            r["cantidad"]
-            for r in productos_bajo.values("marca__nombre_marca").annotate(cantidad=Count("id")).order_by("-cantidad")
-        ],
-        #  Datos para Gráfico de Torta (Marcas) 
         "stock_por_marca_labels": [
             m["marca__nombre_marca"] or "Sin marca"
             for m in Producto.objects.values("marca__nombre_marca").annotate(total=Sum("stock_actual"))
@@ -380,27 +371,31 @@ def _build_estadisticas_context(request):
             m["total"]
             for m in Producto.objects.values("marca__nombre_marca").annotate(total=Sum("stock_actual"))
         ],
- # --- DATOS NUEVOS CON DETALLE ---
-        "stock_critico_categoria_labels": cat_labels,
-        "stock_critico_categoria_values": cat_values,
-        "stock_critico_categoria_tooltips": cat_tooltips,
 
-        "stock_critico_marca_labels": marca_labels,
-        "stock_critico_marca_values": marca_values,
-        "stock_critico_marca_tooltips": marca_tooltips, 
+        # --- GRAFICOS DE BARRAS (CRÍTICOS) ---
+        "stock_critico_categoria_labels": list(critico_cat_map.keys()),
+        "stock_critico_categoria_values": list(critico_cat_map.values()),
+        "stock_critico_categoria_tooltips": preparar_tooltip(list(critico_cat_nombres.values())),
+
+        "stock_critico_marca_labels": list(critico_marca_map.keys()),
+        "stock_critico_marca_values": list(critico_marca_map.values()),
+        "stock_critico_marca_tooltips": preparar_tooltip(list(critico_marca_nombres.values())),
     }
 
 
     return {
         "fecha_inicio": fecha_inicio,
         "fecha_fin": fecha_fin,
+        
+
         "productos_bajo_stock": productos_bajo,
         "productos_sin_stock": productos_sin,
+        
         "total_categorias": Categoria.objects.count(),
         "total_marcas": Marca.objects.count(),
         "total_productos": Producto.objects.count(),
-        "stock_total": Producto.objects.aggregate(total_stock=Sum("stock_actual"))["total_stock"],
-        "total_movimientos": movimientos.count(),
+        "stock_total": Producto.objects.aggregate(t=Sum("stock_actual"))["t"] or 0,
+        
         "chart_data_json": json.dumps(chart_data, cls=DjangoJSONEncoder),
     }
 
@@ -412,11 +407,11 @@ def estadisticas(request):
 
 @login_required(login_url="index")
 def chart_data_api(request):
-    rango = request.GET.get('rango', 'mes') # mes, semana, dia
+    rango = request.GET.get('rango', 'mes')
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
     
-    # 1. Fechas por defecto (últimos 6 meses)
+
     hoy = timezone.now().date()
     if not fecha_inicio:
         fecha_inicio = hoy - timedelta(days=180)
@@ -428,7 +423,7 @@ def chart_data_api(request):
     else:
         fecha_fin = datetime.strptime(fecha_fin, "%Y-%m-%d").date()
 
-    # 2. Definir agrupación según el rango seleccionado
+
     if rango == 'semana':
         trunc_func = TruncWeek('fecha_movimiento')
     elif rango == 'dia':
@@ -438,7 +433,7 @@ def chart_data_api(request):
     else:
         trunc_func = TruncMonth('fecha_movimiento')
 
-    # 3. Consulta a la BD
+
     qs = MovimientoInventario.objects.filter(
         fecha_movimiento__date__range=[fecha_inicio, fecha_fin]
     ).annotate(
@@ -449,7 +444,6 @@ def chart_data_api(request):
         total=Sum('cantidad')
     ).order_by('periodo')
 
-    # 4. Procesar datos en Python
     data_map = {}
 
     for row in qs:
@@ -493,30 +487,30 @@ def carga_datos(request):
         try:
             archivo = request.FILES["archivo_excel"]
             
-            # Leemos el Excel
+
             df = pd.read_excel(archivo)
 
-            # Función de limpieza rápida
+
             def limpiar(txt):
                 return str(txt).strip().lower().replace(" ", "_").replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u")
 
-            # Normalizar columnas
+
             df.columns = [limpiar(c) for c in df.columns]
 
-            # Validar columnas mínimas
+ 
             cols_ok = ["nombre_producto", "categoria", "marca", "stock_actual"]
             faltan = [c for c in cols_ok if c not in df.columns]
 
             if faltan:
                 return JsonResponse({"status": "error", "message": f"Faltan columnas en el Excel: {', '.join(faltan)}"})
 
-            # Procesar filas
+           
             count = 0
             nuevos = 0
             for _, row in df.iterrows():
                 if pd.isna(row.get("nombre_producto")): continue
                 
-                # Crear/Buscar Categoria y Marca
+
                 cat_obj = None
                 if pd.notna(row.get("categoria")):
                     cat_obj, _ = Categoria.objects.get_or_create(nombre_categoria=str(row["categoria"]).strip())
@@ -525,7 +519,7 @@ def carga_datos(request):
                 if pd.notna(row.get("marca")):
                     marca_obj, _ = Marca.objects.get_or_create(nombre_marca=str(row["marca"]).strip())
 
-                # Crear/Actualizar Producto
+                
                 _, created = Producto.objects.update_or_create(
                     nombre_producto=row["nombre_producto"],
                     defaults={
@@ -539,14 +533,14 @@ def carga_datos(request):
                 count += 1
                 if created: nuevos += 1
             
-            # --- RESPUESTA DE ÉXITO ---
+            
             return JsonResponse({
                 "status": "success", 
                 "message": f"¡Proceso finalizado! {count} productos procesados ({nuevos} nuevos)."
             })
 
         except Exception as e:
-            # --- RESPUESTA DE ERROR ---
+           
             return JsonResponse({"status": "error", "message": f"Error interno: {str(e)}"})
 
     # Si entran por URL directa, mostramos el HTML normal
@@ -622,12 +616,12 @@ def registrar_factura(request):
             producto = Producto.objects.get(id=item["id"])
             cantidad = int(item["cantidad"])
 
-            # descontar stock
+            
             producto.stock_actual -= cantidad
             producto.en_alerta_stock = producto.stock_actual <= producto.stock_minimo
             producto.save()
 
-            # crear detalle
+            
             DetalleFactura.objects.create(
                 factura=factura,
                 producto=producto,

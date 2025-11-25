@@ -242,6 +242,25 @@ document.addEventListener("DOMContentLoaded", () => {
    4. GRÁFICOS ESTÁTICOS
 ===========================================*/
 
+/* ===========================================
+   DEFINICIÓN DE PALETA DE COLORES (Global para consistencia)
+===========================================*/
+const paletaColores = [
+    '#4e79a7', // Azul
+    '#f28e2b', // Naranja
+    '#e15759', // Rojo
+    '#76b7b2', // Turquesa
+    '#59a14f', // Verde
+    '#edc948', // Amarillo
+    '#b07aa1', // Lila
+    '#ff9da7', // Rosa
+    '#9c755f', // Café
+    '#bab0ac'  // Gris
+];
+
+/* ===========================================
+   GRÁFICO 1: STOCK POR CATEGORÍA (PASTEL)
+===========================================*/
 if(document.getElementById('stockCategoriaChart')) {
     new Chart(document.getElementById('stockCategoriaChart'), {
         type: 'doughnut',
@@ -249,7 +268,7 @@ if(document.getElementById('stockCategoriaChart')) {
             labels: data.stock_por_categoria_labels,
             datasets: [{
                 data: data.stock_por_categoria_values,
-                backgroundColor: ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f','#edc948','#b07aa1','#ff9da7','#9c755f','#bab0ac'],
+                backgroundColor: paletaColores, 
                 borderWidth: 2
             }]
         },
@@ -261,8 +280,20 @@ if(document.getElementById('stockCategoriaChart')) {
     });
 }
 
-// --- BAR CHART: CRÍTICO POR CATEGORÍA ---
+/* ===========================================
+   GRÁFICO 2: CRÍTICO POR CATEGORÍA (BARRAS)
+===========================================*/
 if(document.getElementById('criticoCategoriaChart')) {
+    
+    const coloresDinamicos = data.stock_critico_categoria_labels.map(nombreCat => {
+        const indiceEnPastel = data.stock_por_categoria_labels.indexOf(nombreCat);
+        if (indiceEnPastel >= 0) {
+            return paletaColores[indiceEnPastel % paletaColores.length];
+        } else {
+            return '#cccccc';
+        }
+    });
+
     new Chart(document.getElementById('criticoCategoriaChart'), {
         type: 'bar',
         data: {
@@ -270,7 +301,7 @@ if(document.getElementById('criticoCategoriaChart')) {
             datasets: [{
                 label: 'Productos Críticos',
                 data: data.stock_critico_categoria_values,
-                backgroundColor: '#f28e2b',
+                backgroundColor: coloresDinamicos, 
                 barThickness: 'flex', maxBarThickness: 40
             }]
         },
@@ -278,7 +309,17 @@ if(document.getElementById('criticoCategoriaChart')) {
             indexAxis: 'y', 
             responsive: true, 
             maintainAspectRatio: false,
+            scales: {
+                x: { 
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,    
+                        precision: 0    
+                    }
+                }
+            },
             plugins: {
+                legend: { display: false },
                 tooltip: {
                     callbacks: {
                         afterBody: function(context) {
@@ -291,8 +332,19 @@ if(document.getElementById('criticoCategoriaChart')) {
     });
 }
 
-// --- BAR CHART: CRÍTICO POR MARCA ---
+/* ===========================================
+   GRÁFICO 4: CRÍTICO POR MARCA (BARRAS)
+===========================================*/
 if(document.getElementById('criticoMarcaChart')) {
+    const coloresMarcaDinamicos = data.stock_critico_marca_labels.map(nombreMarca => {
+        const indiceEnPastel = data.stock_por_marca_labels.indexOf(nombreMarca);
+        if (indiceEnPastel >= 0) {
+            return paletaColores[indiceEnPastel % paletaColores.length];
+        } else {
+            return '#cccccc';
+        }
+    });
+
     new Chart(document.getElementById('criticoMarcaChart'), {
         type: 'bar',
         data: {
@@ -300,14 +352,24 @@ if(document.getElementById('criticoMarcaChart')) {
             datasets: [{
                 label: 'Productos Críticos',
                 data: data.stock_critico_marca_values,
-                backgroundColor: '#9966ff',
+                backgroundColor: coloresMarcaDinamicos,
                 barThickness: 'flex', maxBarThickness: 50
             }]
         },
         options: { 
             responsive: true, 
             maintainAspectRatio: false,
+            scales: {
+                y: {  
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,    
+                        precision: 0    
+                    }
+                }
+            },
             plugins: {
+                legend: { display: false },
                 tooltip: {
                     callbacks: {
                         afterBody: function(context) {
@@ -321,33 +383,26 @@ if(document.getElementById('criticoMarcaChart')) {
 }
 
 /* ===========================================
-    5.GRÁFICO: STOCK POR MARCA (PIE)
+   GRÁFICO 3: STOCK POR MARCA (PASTEL)
 ===========================================*/
 if(document.getElementById('stockMarcaChart')) {
     new Chart(document.getElementById('stockMarcaChart'), {
-        type: 'doughnut', // O 'pie' si prefieres círculo lleno
+        type: 'doughnut',
         data: {
             labels: data.stock_por_marca_labels,
             datasets: [{
                 data: data.stock_por_marca_values,
-                // Paleta de colores variada
-                backgroundColor: [
-                    '#9966ff', '#4bc0c0', '#ff9f40', '#ff6384', '#36a2eb', 
-                    '#ffcd56', '#c9cbcf', '#b07aa1', '#76b7b2', '#59a14f'
-                ],
+                backgroundColor: paletaColores, 
                 borderWidth: 2
             }]
         },
         options: { 
             responsive: true, 
             maintainAspectRatio: false,
-            plugins: { 
-                legend: { position: 'right' } // Leyenda a la derecha
-            }
+            plugins: { legend: { position: 'right' } }
         }
     });
 }
-
 /* ===========================================
    6. DRAG & DROP ALERTA 
 ===========================================*/
