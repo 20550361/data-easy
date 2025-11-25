@@ -23,10 +23,9 @@ from .forms import UserCreateForm, UserUpdateForm
 
 
 # ============================================================
-# 2. LOGIN
+# LOGIN
 # ============================================================
 def index(request):
-    """Login único (ya no hay roles)."""
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
@@ -42,27 +41,23 @@ def index(request):
     return render(request, "index.html")
 
 
-# ============================================================
-# 3. ACCESO DENEGADO
-# ============================================================
 def acceso_denegado(request):
     return render(request, "acceso_denegado.html")
 
 
 # ============================================================
-# 4. HOME (Admin único)
+# HOME
 # ============================================================
 @login_required(login_url="index")
 def home(request):
-
-    # Construimos contexto general
     context = _build_estadisticas_context(request)
 
-    # ALERTA si hay productos en mal estado
     total_alertas = (
         context["productos_sin_stock"].count() +
         context["productos_bajo_stock"].count()
     )
+
+    context["total_alertas"] = total_alertas
 
     return render(request, "home.html", context)
 
@@ -84,12 +79,24 @@ def recuperacion(request):
 # ============================================================
 @login_required(login_url="index")
 def lista_inventario(request):
+
+    # 1️⃣ Búsqueda
     query = request.GET.get("q", "")
+
+    # 2️⃣ Filtros multiselección
+    categorias_sel = [c for c in request.GET.getlist("f_categoria") if c.isdigit()]
+    marcas_sel = [m for m in request.GET.getlist("f_marca") if m.isdigit()]
+
+
+    # 3️⃣ Mostrar solo productos en alerta
     solo_alertas = request.GET.get("solo_alertas") == "1"
 
+    # 4️⃣ Base queryset
     productos = Producto.objects.select_related("categoria", "marca").all()
-    
-    # BUSCADOR DE TEXTO
+
+    # ============================================
+    # 🔍 FILTRO: busqueda por texto
+    # ============================================
     if query:
         productos = productos.filter(
             Q(nombre_producto__icontains=query) |
@@ -97,46 +104,62 @@ def lista_inventario(request):
             Q(marca__nombre_marca__icontains=query)
         )
 
-    # ==========================================
-    # FILTROS NUEVOS: Categoría y Marca
-    # ==========================================
-    f_categoria = request.GET.get("f_categoria")
-    f_marca = request.GET.get("f_marca")
+    # ============================================
+    # ⛏ FILTRO: MULTISELECT Categoría
+    # ============================================
+    if categorias_sel:
+        productos = productos.filter(categoria_id__in=categorias_sel)
 
-    if f_categoria:
-        productos = productos.filter(categoria_id=f_categoria)
+    # ============================================
+    # 🔧 FILTRO: MULTISELECT Marca
+    # ============================================
+    if marcas_sel:
+        productos = productos.filter(marca_id__in=marcas_sel)
 
-    if f_marca:
-        productos = productos.filter(marca_id=f_marca)
-
-    # FILTRO SOLO ALERTAS
+    # ============================================
+    # ⚠ FILTRO: Solo alertas (stock bajo + 0)
+    # ============================================
     if solo_alertas:
         productos = productos.filter(
             Q(stock_actual=0) |
             Q(stock_actual__gt=0, stock_actual__lte=F("stock_minimo"))
         )
 
-    # QUERYSET DE ALERTAS GENERAL
+    # ============================================
+    # ⚠ Queryset para el modal de alertas global
+    # ============================================
     alertas_qs = Producto.objects.filter(
-        Q(stock_actual=0) | Q(stock_actual__gt=0, stock_actual__lte=F("stock_minimo"))
+        Q(stock_actual=0) |
+        Q(stock_actual__gt=0, stock_actual__lte=F("stock_minimo"))
     )
 
-    # PAGINACIÓN
+    # ============================================
+    # 📄 PAGINACIÓN
+    # ============================================
     paginator = Paginator(productos.order_by("nombre_producto"), 20)
     page_obj = paginator.get_page(request.GET.get("page"))
 
+    # ============================================
+    # CONTEXTO FINAL
+    # ============================================
     context = {
         "page_obj": page_obj,
         "categorias": Categoria.objects.all(),
         "marcas": Marca.objects.all(),
+
+        # Conservamos filtros usados
         "search_query": query,
         "solo_alertas": solo_alertas,
-        "total_alertas": alertas_qs.count(),
-        "total_productos": Producto.objects.count(),
+        "categorias_sel": categorias_sel,
+        "marcas_sel": marcas_sel,
 
-        # Listas para el modal de alerta global
+        # Datos alertas
+        "total_alertas": alertas_qs.count(),
         "sin_stock_items": alertas_qs.filter(stock_actual=0),
         "bajo_stock_items": alertas_qs.filter(stock_actual__gt=0),
+
+        # Totales
+        "total_productos": Producto.objects.count(),
     }
 
     return render(request, "inventario.html", context)
@@ -191,14 +214,14 @@ def editar_producto(request, id_producto):
 # ============================================================
 @login_required(login_url="index")
 def eliminar_producto(request, id_producto):
-
     producto = get_object_or_404(Producto, id=id_producto)
     producto.delete()
     messages.success(request, "Producto eliminado.")
     return redirect("inventario_lista")
 # ============================================================
-# 5. USUARIOS (ADMIN)
+# USUARIOS (ADMIN)
 # ============================================================
+
 def es_admin(user):
     return user.is_superuser
 
@@ -245,6 +268,7 @@ def editar_usuario(request, pk):
 @user_passes_test(es_admin, login_url="acceso_denegado")
 def eliminar_usuario(request, pk):
     usuario = get_object_or_404(User, pk=pk)
+
     if usuario.is_superuser:
         messages.error(request, "No puedes eliminar al superusuario.")
         return redirect("lista_usuarios")
@@ -253,7 +277,7 @@ def eliminar_usuario(request, pk):
     messages.success(request, "Usuario eliminado.")
     return redirect("lista_usuarios")
 # ============================================================
-# 6. ESTADÍSTICAS
+# ESTADÍSTICAS
 # ============================================================
 def _build_estadisticas_context(request):
 
@@ -275,11 +299,11 @@ def _build_estadisticas_context(request):
         fecha_movimiento__date__range=[fecha_inicio, fecha_fin]
     )
 
-    # ========== Datos generales ==========
+    # Datos generales
     productos_bajo = Producto.objects.filter(stock_actual__lt=F("stock_minimo"))
     productos_sin = Producto.objects.filter(stock_actual=0)
 
-    # ========== Gráficos ==========
+    # Gráficos
     movimientos_por_mes = (
         movimientos.annotate(mes=TruncMonth("fecha_movimiento"))
         .values("mes", "tipo_movimiento")
@@ -352,7 +376,7 @@ def estadisticas(request):
 
 
 # ============================================================
-# 7. CARGA MASIVA DE PRODUCTOS
+# CARGA MASIVA DE PRODUCTOS
 # ============================================================
 @login_required(login_url="index")
 def carga_datos(request):
@@ -417,7 +441,7 @@ def carga_datos(request):
 
 
 # ============================================================
-# 8. EXPORTAR EXCEL
+# EXPORTAR EXCEL
 # ============================================================
 @login_required(login_url="index")
 def exportar_excel(request):
@@ -457,7 +481,7 @@ def exportar_excel(request):
 
     return response
 # ============================================================
-# 9. FACTURACIÓN
+# FACTURACIÓN
 # ============================================================
 @login_required(login_url="index")
 def facturacion(request):
@@ -465,6 +489,9 @@ def facturacion(request):
     return render(request, "facturacion.html", {"productos": productos})
 
 
+# ============================================================
+# REGISTRAR FACTURA (AJAX / JSON)
+# ============================================================
 @login_required(login_url="index")
 def registrar_factura(request):
     if request.method == "POST":
@@ -474,21 +501,23 @@ def registrar_factura(request):
         items = datos.get("items")
         total = datos.get("total")
 
+        # Crear factura
         factura = Factura.objects.create(
             cliente=cliente,
             total=total
         )
 
+        # Crear detalle + actualizar stock
         for item in items:
             producto = Producto.objects.get(id=item["id"])
             cantidad = int(item["cantidad"])
 
-            # descontar stock
+            # Descontar stock
             producto.stock_actual -= cantidad
             producto.en_alerta_stock = producto.stock_actual <= producto.stock_minimo
             producto.save()
 
-            # crear detalle
+            # Crear detalle
             DetalleFactura.objects.create(
                 factura=factura,
                 producto=producto,
@@ -505,6 +534,9 @@ def registrar_factura(request):
     return JsonResponse({"status": "error"})
 
 
+# ============================================================
+# GENERAR PDF
+# ============================================================
 @login_required(login_url="index")
 def factura_pdf(request, id):
     factura = Factura.objects.get(id=id)
