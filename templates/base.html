@@ -33,43 +33,46 @@
     </div>
 </header>
 
-<div class="main-container">
-
-    <aside class="sidebar">
+<aside class="sidebar">
+    <div class="sidebar-content-top">
         <div class="profile-section">
-
-            <!-- FOTO DE PERFIL QUE ABRE EL POPUP -->
-            <div class="profile-pic-container"
-                 data-bs-toggle="modal"
-                 data-bs-target="#modalPerfil"
-                 style="cursor:pointer;">
+            <div class="profile-pic-container" data-bs-toggle="modal" data-bs-target="#modalPerfil" style="cursor:pointer;">
                 <img src="{% static 'img/user.png' %}" class="profile-pic">
             </div>
-
             <h3>{{ user.username }}</h3>
         </div>
 
         <nav class="sidebar-nav">
             <a href="{% url 'home' %}" class="sidebar-btn">🏠 Home</a>
-
-            <!-- Mi ficha eliminado del sidebar -->
-
-            <a href="{% url 'inventario_lista' %}" class="sidebar-btn">📦 Inventario</a>
-            <a href="{% url 'lista_usuarios' %}" class="sidebar-btn">👥 Gestión de usuarios</a>
-
-            <!-- FACTURACIÓN -->
-            <a href="{% url 'facturacion' %}" class="sidebar-btn">🧾 Facturación</a>
-
-            <!-- BOTÓN PARA ABRIR EL POP-UP DE CARGA EXCEL -->
-            <a href="#" class="sidebar-btn"
-               data-bs-toggle="modal"
-               data-bs-target="#modalCargaDatos">
-                📁 Carga Excel
-            </a>
+             <a href="{% url 'inventario_lista' %}" class="sidebar-btn">📦 Inventario</a>
+             <a href="{% url 'lista_usuarios' %}" class="sidebar-btn">👥 Gestión de usuarios</a>
+             <a href="{% url 'facturacion' %}" class="sidebar-btn">🧾 Facturación</a>
+             <a href="#" class="sidebar-btn" data-bs-toggle="modal" data-bs-target="#modalCargaDatos">📁 Carga Excel</a>
         </nav>
+    </div>
 
-    </aside>
+    {% if hay_alertas_sidebar %}
+    <div class="sidebar-alerts-bottom">
+        <h5 class="alert-title">⚠ Alertas de Stock</h5>
+        <ul class="alert-list-scroll">
+            {% for p in sidebar_alertas %}
+            <li class="alert-item">
+                {% if p.stock_actual == 0 %}
+                    <span style="color: #e74c3c;">🔴</span> 
+                {% else %}
+                    <span style="color: #f1c40f;">🟡</span> 
+                {% endif %}
+                <a href="{% url 'inventario_lista' %}?q={{ p.nombre_producto }}">
+                    {{ p.nombre_producto }}
+                    <span class="stock-num">({{ p.stock_actual }})</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
 
+</aside>
     <main class="content-area">
         {% if messages %}
         <div class="container mt-2">
@@ -133,18 +136,18 @@ document.addEventListener("DOMContentLoaded", function() {
 
     if(form){
         form.addEventListener("submit", function(e) {
-            e.preventDefault(); // 1. Evitamos recargar la página
+            e.preventDefault();
 
-            // Limpieza visual
+           
             feedback.style.display = "none";
-            feedback.className = "alert"; // Reset de clases
-            progress.style.display = "block"; // Mostrar barra
-            btn.disabled = true; // Desactivar botón para evitar doble clic
+            feedback.className = "alert"; 
+            progress.style.display = "block"; 
+            btn.disabled = true; 
 
-            // Preparar datos
+            
             const formData = new FormData(form);
 
-            // 2. Enviar petición al servidor
+           
             fetch("{% url 'carga_datos' %}", {
                 method: "POST",
                 body: formData,
@@ -163,7 +166,6 @@ document.addEventListener("DOMContentLoaded", function() {
                     feedback.classList.add("alert-success");
                     feedback.innerHTML = `✅ <strong>¡Listo!</strong> ${data.message}`;
                     
-                    // Opcional: Recargar la página después de 2 segundos para ver los cambios
                     setTimeout(() => {
                         window.location.reload();
                     }, 2000);
@@ -201,7 +203,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
       <div class="modal-body">
 
-        <!-- Insertamos el contenido reducido de perfil.html -->
         {% include 'perfil.html' %}
 
       </div>

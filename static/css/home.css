@@ -58,7 +58,6 @@
   height: 320px !important;
 }
 
-/* MOVIMIENTOS MÁS ESTRECHO */
 #movimientosMesChart {
   width: 85% !important;
   margin: 0 auto;
@@ -80,74 +79,36 @@
   box-shadow: var(--sombra-ligera);
 }
 
-/* ===========================================
-   ALERTA FLOTANTE
-===========================================*/
-.alerta-stock {
-  position: fixed;
-  
-  /* === POSICIÓN === */
-  bottom: 20px; 
-  right: 20px;
-  top: auto !important;    
-  
-  /* === TAMAÑO === */
-  height: auto !important; 
-  max-height: 400px;       
-  overflow-y: auto;        
-
-  /* === ESTILO VISUAL === */
-  background: #ffcc00;
-  padding: 16px;
-  border-radius: 10px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-  cursor: grab;
-  width: 300px;           
-  z-index: 9999;
-
-  animation: slideInUp 0.5s ease-out forwards;
-}
-
-.alerta-stock:active { cursor: grabbing; }
-.alerta-stock-list { padding-left: 0; list-style: none; margin: 0; }
-.alerta-stock-list li { margin-bottom: 4px; }
-.alerta-stock-link { font-size: 0.8rem; }
-
-@keyframes slideInUp {
-    from { opacity: 0; transform: translateY(100%); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
 .filtro-fechas {
     display: flex;
     gap: 15px;
-    align-items: flex-end;
+    align-items: flex-end; 
     background: #ffffffdd;
     padding: 12px 15px;
     border-radius: 8px;
     margin-bottom: 20px;
     border: 1px solid #e5e7eb;
-    flex-wrap: wrap;
+    flex-wrap: wrap; 
 }
+
 .filtro-fechas label {
     font-size: 0.8rem;
     font-weight: 600;
     margin-bottom: 3px;
     display: block;
 }
+
 .filtro-fechas input[type="date"], 
 .filtro-fechas select {
     padding: 6px 10px;
     border-radius: 6px;
     border: 1px solid #ccc;
     min-width: 130px;
-}
-.filtro-fechas .btn {
-    height: 38px;
+    width: auto !important; 
+    display: inline-block;
+    max-width: 200px;       
 }
 
-.chart-wrapper {
-    position: relative;
-    height: 300px; 
-    width: 100%;
+.filtro-fechas .btn {
+    height: 38px; 
 }

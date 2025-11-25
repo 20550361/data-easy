@@ -139,3 +139,24 @@ DATABASES = {
         }
     }
 }
+
+TEMPLATES = [
+    {
+        # ESTA LÍNEA ES LA QUE SEGURAMENTE FALTA O ESTÁ ROTA:
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        
+        'DIRS': [BASE_DIR / 'templates'],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+                
+                # Aquí está la línea nueva para tus alertas del sidebar:
+                'dataeasy.context_processors.alertas_sidebar',
+            ],
+        },
+    },
+]

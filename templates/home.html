@@ -35,7 +35,7 @@
     <a href="{% url 'home' %}" class="btn btn-outline-secondary">❌ Limpiar</a>
     {% endif %}
 
-    <div style="margin-left: auto; border-left: 1px solid #ccc; padding-left: 15px;">
+    <div style="margin-left: auto; display: flex; flex-direction: column; align-items: flex-start; padding-left: 15px; border-left: 1px solid #ccc;">
         <label>Vista Dashboard</label>
         <select id="viewSelector" class="form-select" onchange="cambiarDashboard(this.value)">
             <option value="producto" selected>📦 Productos</option>
@@ -45,19 +45,6 @@
     </div>
 </form>
 
-{% if productos_bajo_stock or productos_sin_stock %}
-<div id="alerta-stock-home" class="alerta-stock-home alerta-stock">
-    <h5>⚠ Alertas activas</h5>
-    <ul class="alerta-stock-list">
-        {% for p in productos_sin_stock %}
-        <li>🔴 <a href="{% url 'inventario_lista' %}?q={{ p.nombre_producto }}">{{ p.nombre_producto }}</a></li>
-        {% endfor %}
-        {% for p in productos_bajo_stock %}
-        <li>🟡 <a href="{% url 'inventario_lista' %}?q={{ p.nombre_producto }}">{{ p.nombre_producto }}</a></li>
-        {% endfor %}
-    </ul>
-</div>
-{% endif %}
 
 
 <div id="dash-producto" class="dashboard-section">
@@ -403,28 +390,6 @@ if(document.getElementById('stockMarcaChart')) {
         }
     });
 }
-/* ===========================================
-   6. DRAG & DROP ALERTA 
-===========================================*/
-document.addEventListener("DOMContentLoaded", () => {
-    const box = document.getElementById("alerta-stock-home");
-    if (!box) return;
 
-    let mov = false, offsetX = 0, offsetY = 0;
-    box.addEventListener("mousedown", e => {
-        mov = true;
-        offsetX = e.clientX - box.getBoundingClientRect().left;
-        offsetY = e.clientY - box.getBoundingClientRect().top;
-        box.style.cursor = "grabbing";
-    });
-    document.addEventListener("mousemove", e => {
-        if (!mov) return;
-        let x = e.clientX - offsetX;
-        let y = e.clientY - offsetY;
-        box.style.left = Math.max(10, Math.min(x, window.innerWidth - box.offsetWidth - 10)) + "px";
-        box.style.top = Math.max(70, Math.min(y, window.innerHeight - box.offsetHeight - 10)) + "px";
-    });
-    document.addEventListener("mouseup", () => mov = false);
-});
 </script>
 {% endblock %}
