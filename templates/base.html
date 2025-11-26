@@ -33,43 +33,46 @@
     </div>
 </header>
 
-<div class="main-container">
-
-    <aside class="sidebar">
+<aside class="sidebar">
+    <div class="sidebar-content-top">
         <div class="profile-section">
-
-            <!-- FOTO DE PERFIL QUE ABRE EL POPUP -->
-            <div class="profile-pic-container"
-                 data-bs-toggle="modal"
-                 data-bs-target="#modalPerfil"
-                 style="cursor:pointer;">
+            <div class="profile-pic-container" data-bs-toggle="modal" data-bs-target="#modalPerfil" style="cursor:pointer;">
                 <img src="{% static 'img/user.png' %}" class="profile-pic">
             </div>
-
             <h3>{{ user.username }}</h3>
         </div>
 
         <nav class="sidebar-nav">
             <a href="{% url 'home' %}" class="sidebar-btn">🏠 Home</a>
-
-            <!-- Mi ficha eliminado del sidebar -->
-
-            <a href="{% url 'inventario_lista' %}" class="sidebar-btn">📦 Inventario</a>
-            <a href="{% url 'lista_usuarios' %}" class="sidebar-btn">👥 Gestión de usuarios</a>
-
-            <!-- FACTURACIÓN -->
-            <a href="{% url 'facturacion' %}" class="sidebar-btn">🧾 Facturación</a>
-
-            <!-- BOTÓN PARA ABRIR EL POP-UP DE CARGA EXCEL -->
-            <a href="#" class="sidebar-btn"
-               data-bs-toggle="modal"
-               data-bs-target="#modalCargaDatos">
-                📁 Carga Excel
-            </a>
+             <a href="{% url 'inventario_lista' %}" class="sidebar-btn">📦 Inventario</a>
+             <a href="{% url 'lista_usuarios' %}" class="sidebar-btn">👥 Gestión de usuarios</a>
+             <a href="{% url 'facturacion' %}" class="sidebar-btn">🧾 Facturación</a>
+             <a href="#" class="sidebar-btn" data-bs-toggle="modal" data-bs-target="#modalCargaDatos">📁 Carga Excel</a>
         </nav>
+    </div>
 
-    </aside>
+    {% if hay_alertas_sidebar %}
+    <div class="sidebar-alerts-bottom">
+        <h5 class="alert-title">⚠ Alertas de Stock</h5>
+        <ul class="alert-list-scroll">
+            {% for p in sidebar_alertas %}
+            <li class="alert-item">
+                {% if p.stock_actual == 0 %}
+                    <span style="color: #e74c3c;">🔴</span> 
+                {% else %}
+                    <span style="color: #f1c40f;">🟡</span> 
+                {% endif %}
+                <a href="{% url 'inventario_lista' %}?q={{ p.nombre_producto }}">
+                    {{ p.nombre_producto }}
+                    <span class="stock-num">({{ p.stock_actual }})</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
 
+</aside>
     <main class="content-area">
         {% if messages %}
         <div class="container mt-2">
@@ -99,38 +102,91 @@
 
       <div class="modal-body">
 
-        <!-- FORMULARIO DE CARGA -->
-        <form id="formExcel" method="post" enctype="multipart/form-data"
-              action="{% url 'carga_datos' %}">
-
+        <form id="formExcelAjax" method="post" enctype="multipart/form-data">
             {% csrf_token %}
+            
+            <label class="form-label text-muted">
+                Columnas requeridas: <strong>nombre_producto, categoria, marca, stock_actual</strong>
+            </label>
 
-            <input type="hidden" name="next" value="{{ request.path }}">
+            <input type="file" class="form-control mb-3" name="archivo_excel" id="archivo_excel_input" accept=".xlsx,.xls" required>
 
-            <label class="form-label">Selecciona archivo Excel con: nombre_producto, categoria, marca, descripcion, stock_actual, stock_minimo</label>
-
-            <input type="file" class="form-control" name="archivo_excel"
-                   id="archivo_excel" accept=".xlsx,.xls" required>
-
-            <!-- BARRA DE PROGRESO -->
-            <div id="progressContainer" class="mt-3" style="display:none;">
-                <div class="progress">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated"
-                         id="progressBar" style="width: 0%;">
-                    </div>
-                </div>
+            <div id="uploadProgress" class="progress mb-3" style="display:none;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%">Procesando...</div>
             </div>
 
-            <button type="submit" class="btn btn-primary w-100 mt-3">
-                Subir datos
-            </button>
+            <div id="uploadFeedback" style="display:none;" class="alert"></div>
 
+            <button type="submit" class="btn btn-primary w-100" id="btnSubirExcel">
+                🔥 Subir datos
+            </button>
         </form>
 
       </div>
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const form = document.getElementById("formExcelAjax");
+    const feedback = document.getElementById("uploadFeedback");
+    const progress = document.getElementById("uploadProgress");
+    const btn = document.getElementById("btnSubirExcel");
+
+    if(form){
+        form.addEventListener("submit", function(e) {
+            e.preventDefault();
+
+           
+            feedback.style.display = "none";
+            feedback.className = "alert"; 
+            progress.style.display = "block"; 
+            btn.disabled = true; 
+
+            
+            const formData = new FormData(form);
+
+           
+            fetch("{% url 'carga_datos' %}", {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                progress.style.display = "none";
+                btn.disabled = false;
+                feedback.style.display = "block";
+
+                if (data.status === "success") {
+                    // ÉXITO: Verde
+                    feedback.classList.add("alert-success");
+                    feedback.innerHTML = `✅ <strong>¡Listo!</strong> ${data.message}`;
+                    
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    // ERROR: Rojo
+                    feedback.classList.add("alert-danger");
+                    feedback.innerHTML = `❌ <strong>Error:</strong> ${data.message}`;
+                }
+            })
+            .catch(error => {
+                progress.style.display = "none";
+                btn.disabled = false;
+                feedback.style.display = "block";
+                feedback.classList.add("alert-danger");
+                feedback.innerHTML = "❌ Error de conexión con el servidor.";
+                console.error("Error:", error);
+            });
+        });
+    }
+});
+</script>
 
 
 <!-- ======================================================== -->
@@ -147,7 +203,6 @@
 
       <div class="modal-body">
 
-        <!-- Insertamos el contenido reducido de perfil.html -->
         {% include 'perfil.html' %}
 
       </div>

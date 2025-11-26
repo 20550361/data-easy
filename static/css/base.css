@@ -21,7 +21,6 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--color-fondo);
     color: #333;
-    /* Espacio arriba para el Topbar fijo */
     padding-top: var(--alto-topbar); 
 }
 
@@ -45,7 +44,7 @@ body {
 /* Estilo para la imagen del logo en el topbar */
 .topbar .logo {
     font-size: 1.5rem;
-    color: var(--color-texto); /* Texto blanco sobre el fondo oscuro del topbar */
+    color: var(--color-texto); 
     margin: 0;
 }
 
@@ -63,13 +62,13 @@ body {
     height: 36px;
     border-radius: 50%;
     cursor: pointer;
-    object-fit: cover; /* Asegura que la imagen llene el círculo */
+    object-fit: cover; 
     border: 2px solid var(--color-sidebar-hover);
     transition: transform 0.2s, border-color 0.2s;
 }
 .user-icon:hover {
     transform: scale(1.05);
-    border-color: var(--color-activo); /* Borde naranja al pasar el mouse */
+    border-color: var(--color-activo); 
 }
 
 .dropdown-menu {
@@ -105,8 +104,8 @@ body {
     box-sizing: border-box;
     position: fixed; 
     left: 0;
-    top: var(--alto-topbar); /* Empieza DEBAJO del topbar */
-    height: calc(100vh - var(--alto-topbar)); /* Alto restante */
+    top: var(--alto-topbar); 
+    height: calc(100vh - var(--alto-topbar)); 
     z-index: 90;
     overflow-y: auto;
 }
@@ -118,24 +117,24 @@ body {
     border-bottom: 1px solid var(--color-sidebar-hover);
 }
 
-/* Contenedor circular (perfil en sidebar) */
+
 .profile-pic-container {
     width: 90px;
     height: 90px;
     border-radius: 50%;
-    background-color: var(--color-activo); /* Fondo naranja para el borde */
+    background-color: var(--color-activo); 
     display: inline-flex;
     align-items: center;
     justify-content: center;
     margin-bottom: 10px;
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2); /* Borde blanco sutil */
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2); 
 }
 .profile-pic {
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    object-fit: cover; /* Asegura que la imagen llene el círculo */
-    border: 2px solid var(--color-texto); /* Borde interno blanco */
+    object-fit: cover; 
+    border: 2px solid var(--color-texto); 
 }
 
 .profile-section h3 {
@@ -167,14 +166,13 @@ body {
     font-weight: 600;
 }
 
-/* === 3. ÁREA DE CONTENIDO === */
 .content-area {
     margin-left: var(--ancho-sidebar);
     padding: 30px;
-    /* (El padding-top lo controla el 'body') */
+    
 }
 
-/* === 4. ESTILOS DE TABLAS === */
+
 .table-container {
     overflow-x: auto;
     background-color: #ffffff;
@@ -186,3 +184,77 @@ body {
     width: 100%;
     border-collapse: collapse;
 }
+
+.sidebar {
+    display: flex !important;       
+    flex-direction: column;         
+    justify-content: space-between; 
+    overflow: hidden;               
+}
+
+
+.sidebar-content-top {
+    overflow-y: auto; 
+    flex-grow: 1; /
+}
+
+
+.sidebar-alerts-bottom {
+    margin-top: auto;
+    margin-bottom: 20px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 8px;
+    padding: 15px;
+    border-left: 4px solid #e74c3c;
+    
+   
+    max-height: 400px;         
+    
+    overflow-y: auto;
+    flex-shrink: 0; 
+}
+
+
+.alert-title {
+    color: #fff;
+    font-size: 0.9rem;
+    margin: 0 0 10px 0;
+    font-weight: bold;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 5px;
+}
+
+.alert-list-scroll {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.alert-item {
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+    white-space: nowrap;      
+    overflow: hidden;
+    text-overflow: ellipsis;  
+}
+
+.alert-item a {
+    color: #ccc;
+    text-decoration: none;
+    margin-left: 5px;
+}
+
+.alert-item a:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+.stock-num {
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+
+.sidebar-alerts-bottom::-webkit-scrollbar { width: 5px; }
+.sidebar-alerts-bottom::-webkit-scrollbar-thumb { background: #666; border-radius: 3px; }
+.sidebar-alerts-bottom::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }

@@ -131,7 +131,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'dataeasy',
         'USER': 'root',
-        'PASSWORD': 'Admin1234',
+        'PASSWORD': '123456',
         'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
@@ -139,3 +139,23 @@ DATABASES = {
         }
     }
 }
+
+TEMPLATES = [
+    {
+        
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        
+        'DIRS': [BASE_DIR / 'templates'],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+              
+                'dataeasy.context_processors.alertas_sidebar',
+            ],
+        },
+    },
+]

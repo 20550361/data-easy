@@ -3,6 +3,7 @@ import json
 import csv
 from datetime import datetime, timedelta
 import pandas as pd
+import unicodedata
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
@@ -17,6 +18,9 @@ from django.contrib.auth.models import User
 from django.http import HttpResponse, JsonResponse
 from xhtml2pdf import pisa
 from django.template.loader import render_to_string
+from django.db.models.functions import TruncMonth, TruncWeek, TruncDay
+import locale
+from django.http import JsonResponse
 
 from .models import Producto, Categoria, Marca, MovimientoInventario
 from .forms import UserCreateForm, UserUpdateForm
@@ -280,7 +284,6 @@ def eliminar_usuario(request, pk):
 # ESTADÍSTICAS
 # ============================================================
 def _build_estadisticas_context(request):
-
     fecha_inicio = request.GET.get("fecha_inicio")
     fecha_fin = request.GET.get("fecha_fin")
     hoy = timezone.now().date()
@@ -288,7 +291,7 @@ def _build_estadisticas_context(request):
     if fecha_inicio:
         fecha_inicio = datetime.strptime(fecha_inicio, "%Y-%m-%d").date()
     else:
-        fecha_inicio = hoy - timedelta(days=180)
+        fecha_inicio = hoy - timedelta(days=180) 
 
     if fecha_fin:
         fecha_fin = datetime.strptime(fecha_fin, "%Y-%m-%d").date()
@@ -299,11 +302,54 @@ def _build_estadisticas_context(request):
         fecha_movimiento__date__range=[fecha_inicio, fecha_fin]
     )
 
-    # Datos generales
-    productos_bajo = Producto.objects.filter(stock_actual__lt=F("stock_minimo"))
-    productos_sin = Producto.objects.filter(stock_actual=0)
+    productos_criticos_total = Producto.objects.filter(
+        stock_actual__lte=F("stock_minimo")
+    ).select_related('categoria', 'marca')
 
-    # Gráficos
+
+    productos_sin = productos_criticos_total.filter(stock_actual=0)
+    productos_bajo = productos_criticos_total.filter(stock_actual__gt=0)
+
+    critico_cat_map = {}
+    critico_cat_nombres = {}
+
+    for p in productos_criticos_total:
+        cat_name = p.categoria.nombre_categoria if p.categoria else "Sin categoría"
+        
+        if cat_name not in critico_cat_map:
+            critico_cat_map[cat_name] = 0
+            critico_cat_nombres[cat_name] = []
+        
+        critico_cat_map[cat_name] += 1
+        estado = "(0)" if p.stock_actual == 0 else f"({p.stock_actual}/{p.stock_minimo})"
+        critico_cat_nombres[cat_name].append(f"{p.nombre_producto} {estado}")
+
+
+    critico_marca_map = {}
+    critico_marca_nombres = {}
+
+    for p in productos_criticos_total:
+        marca_name = p.marca.nombre_marca if p.marca else "Sin marca"
+        
+        if marca_name not in critico_marca_map:
+            critico_marca_map[marca_name] = 0
+            critico_marca_nombres[marca_name] = []
+            
+        critico_marca_map[marca_name] += 1
+        estado = "(0)" if p.stock_actual == 0 else f"({p.stock_actual}/{p.stock_minimo})"
+        critico_marca_nombres[marca_name].append(f"{p.nombre_producto} {estado}")
+
+
+    def preparar_tooltip(lista_nombres):
+        resultado = []
+        for nombres in lista_nombres:
+            recorte = nombres[:5]
+            if len(nombres) > 5:
+                recorte.append(f"... y {len(nombres)-5} más")
+            resultado.append(recorte)
+        return resultado
+
+
     movimientos_por_mes = (
         movimientos.annotate(mes=TruncMonth("fecha_movimiento"))
         .values("mes", "tipo_movimiento")
@@ -314,6 +360,7 @@ def _build_estadisticas_context(request):
     meses = []
     entradas = []
     salidas = []
+    
 
     curr = fecha_inicio.replace(day=1)
     while curr <= fecha_fin:
@@ -321,51 +368,69 @@ def _build_estadisticas_context(request):
         meses.append(key)
         entradas.append(0)
         salidas.append(0)
-        curr = (curr + timedelta(days=32)).replace(day=1)
+
+        next_month = curr.replace(day=28) + timedelta(days=4)
+        curr = next_month.replace(day=1)
+
 
     for row in movimientos_por_mes:
-        m = row["mes"].strftime("%Y-%m")
-        idx = meses.index(m)
+        if row["mes"]:
+            m = row["mes"].strftime("%Y-%m")
+            if m in meses:
+                idx = meses.index(m)
+                if row["tipo_movimiento"] == "entrada":
+                    entradas[idx] = row["total"]
+                else:
+                    salidas[idx] = row["total"]
 
-        if row["tipo_movimiento"] == "entrada":
-            entradas[idx] = row["total"]
-        else:
-            salidas[idx] = row["total"]
 
     chart_data = {
         "meses": meses,
         "entradas": entradas,
         "salidas": salidas,
+        
+        # --- GRAFICOS DE PASTEL (DISTRIBUCIÓN) ---
         "stock_por_categoria_labels": [
             c["categoria__nombre_categoria"] or "Sin categoría"
-            for c in Producto.objects.values("categoria__nombre_categoria")
-                .annotate(total=Sum("stock_actual"))
+            for c in Producto.objects.values("categoria__nombre_categoria").annotate(total=Sum("stock_actual"))
         ],
         "stock_por_categoria_values": [
             c["total"]
-            for c in Producto.objects.values("categoria__nombre_categoria")
-                .annotate(total=Sum("stock_actual"))
+            for c in Producto.objects.values("categoria__nombre_categoria").annotate(total=Sum("stock_actual"))
         ],
-        "stock_critico_marca_labels": [
-            r["marca__nombre_marca"]
-            for r in productos_bajo.values("marca__nombre_marca").annotate(cantidad=Count("id"))
+        "stock_por_marca_labels": [
+            m["marca__nombre_marca"] or "Sin marca"
+            for m in Producto.objects.values("marca__nombre_marca").annotate(total=Sum("stock_actual"))
         ],
-        "stock_critico_marca_values": [
-            r["cantidad"]
-            for r in productos_bajo.values("marca__nombre_marca").annotate(cantidad=Count("id"))
+        "stock_por_marca_values": [
+            m["total"]
+            for m in Producto.objects.values("marca__nombre_marca").annotate(total=Sum("stock_actual"))
         ],
+
+        # --- GRAFICOS DE BARRAS (CRÍTICOS) ---
+        "stock_critico_categoria_labels": list(critico_cat_map.keys()),
+        "stock_critico_categoria_values": list(critico_cat_map.values()),
+        "stock_critico_categoria_tooltips": preparar_tooltip(list(critico_cat_nombres.values())),
+
+        "stock_critico_marca_labels": list(critico_marca_map.keys()),
+        "stock_critico_marca_values": list(critico_marca_map.values()),
+        "stock_critico_marca_tooltips": preparar_tooltip(list(critico_marca_nombres.values())),
     }
+
 
     return {
         "fecha_inicio": fecha_inicio,
         "fecha_fin": fecha_fin,
+        
+
         "productos_bajo_stock": productos_bajo,
         "productos_sin_stock": productos_sin,
+        
         "total_categorias": Categoria.objects.count(),
         "total_marcas": Marca.objects.count(),
         "total_productos": Producto.objects.count(),
-        "stock_total": Producto.objects.aggregate(total_stock=Sum("stock_actual"))["total_stock"],
-        "total_movimientos": movimientos.count(),
+        "stock_total": Producto.objects.aggregate(t=Sum("stock_actual"))["t"] or 0,
+        
         "chart_data_json": json.dumps(chart_data, cls=DjangoJSONEncoder),
     }
 
@@ -375,68 +440,145 @@ def estadisticas(request):
     return render(request, "estadisticas.html", _build_estadisticas_context(request))
 
 
+@login_required(login_url="index")
+def chart_data_api(request):
+    rango = request.GET.get('rango', 'mes')
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
+    
+
+    hoy = timezone.now().date()
+    if not fecha_inicio:
+        fecha_inicio = hoy - timedelta(days=180)
+    else:
+        fecha_inicio = datetime.strptime(fecha_inicio, "%Y-%m-%d").date()
+        
+    if not fecha_fin:
+        fecha_fin = hoy
+    else:
+        fecha_fin = datetime.strptime(fecha_fin, "%Y-%m-%d").date()
+
+
+    if rango == 'semana':
+        trunc_func = TruncWeek('fecha_movimiento')
+    elif rango == 'dia':
+        trunc_func = TruncDay('fecha_movimiento')
+        if (fecha_fin - fecha_inicio).days > 60: 
+            fecha_inicio = fecha_fin - timedelta(days=30)
+    else:
+        trunc_func = TruncMonth('fecha_movimiento')
+
+
+    qs = MovimientoInventario.objects.filter(
+        fecha_movimiento__date__range=[fecha_inicio, fecha_fin]
+    ).annotate(
+        periodo=trunc_func
+    ).values(
+        'periodo', 'tipo_movimiento'
+    ).annotate(
+        total=Sum('cantidad')
+    ).order_by('periodo')
+
+    data_map = {}
+
+    for row in qs:
+        fecha_obj = row['periodo']
+        
+        if rango == 'semana':
+            label = f"Semana {fecha_obj.strftime('%W')}"
+        elif rango == 'dia':
+            label = fecha_obj.strftime('%d/%m')
+        else:
+            label = fecha_obj.strftime('%b-%Y')
+
+        if label not in data_map:
+            data_map[label] = {'entradas': 0, 'salidas': 0}
+        
+        if row['tipo_movimiento'] == 'entrada':
+            data_map[label]['entradas'] += row['total']
+        elif row['tipo_movimiento'] == 'salida':
+            data_map[label]['salidas'] += row['total']
+
+    labels = list(data_map.keys())
+    entradas = [data_map[k]['entradas'] for k in labels]
+    salidas = [data_map[k]['salidas'] for k in labels]
+
+    return JsonResponse({
+        "labels": labels,
+        "entradas": entradas,
+        "salidas": salidas
+    })
+
 # ============================================================
 # CARGA MASIVA DE PRODUCTOS
 # ============================================================
 @login_required(login_url="index")
 def carga_datos(request):
 
-    if request.method == "POST" and request.FILES.get("archivo_excel"):
-
-        next_url = request.POST.get("next") or "home"
-        archivo = request.FILES["archivo_excel"]
-
-        columnas = ["nombre_producto", "categoria", "marca", "descripcion", "stock_actual", "stock_minimo"]
+    if request.method == "POST":
+        if not request.FILES.get("archivo_excel"):
+            return JsonResponse({"status": "error", "message": "No seleccionaste ningún archivo."})
 
         try:
+            archivo = request.FILES["archivo_excel"]
+            
+
             df = pd.read_excel(archivo)
-            df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
 
-            faltantes = [c for c in columnas if c not in df.columns]
-            if faltantes:
-                messages.error(request, "Faltan columnas: " + ", ".join(faltantes))
-                return redirect(next_url)
 
+            def limpiar(txt):
+                return str(txt).strip().lower().replace(" ", "_").replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u")
+
+
+            df.columns = [limpiar(c) for c in df.columns]
+
+ 
+            cols_ok = ["nombre_producto", "categoria", "marca", "stock_actual"]
+            faltan = [c for c in cols_ok if c not in df.columns]
+
+            if faltan:
+                return JsonResponse({"status": "error", "message": f"Faltan columnas en el Excel: {', '.join(faltan)}"})
+
+           
+            count = 0
             nuevos = 0
-            actualizados = 0
-
             for _, row in df.iterrows():
+                if pd.isna(row.get("nombre_producto")): continue
+                
 
-                nombre = row.get("nombre_producto")
-                if not nombre:
-                    continue
+                cat_obj = None
+                if pd.notna(row.get("categoria")):
+                    cat_obj, _ = Categoria.objects.get_or_create(nombre_categoria=str(row["categoria"]).strip())
+                
+                marca_obj = None
+                if pd.notna(row.get("marca")):
+                    marca_obj, _ = Marca.objects.get_or_create(nombre_marca=str(row["marca"]).strip())
 
-                categoria = Categoria.objects.get_or_create(
-                    nombre_categoria=row.get("categoria")
-                )[0] if row.get("categoria") else None
-
-                marca = Marca.objects.get_or_create(
-                    nombre_marca=row.get("marca")
-                )[0] if row.get("marca") else None
-
-                producto, creado = Producto.objects.update_or_create(
-                    nombre_producto=nombre,
+                
+                _, created = Producto.objects.update_or_create(
+                    nombre_producto=row["nombre_producto"],
                     defaults={
-                        "descripcion": row.get("descripcion", ""),
-                        "categoria": categoria,
-                        "marca": marca,
-                        "stock_minimo": int(row.get("stock_minimo", 0)),
+                        "categoria": cat_obj,
+                        "marca": marca_obj,
                         "stock_actual": int(row.get("stock_actual", 0)),
+                        "stock_minimo": int(row.get("stock_minimo", 5)),
+                        "descripcion": row.get("descripcion", "")
                     }
                 )
-
-                if creado:
-                    nuevos += 1
-                else:
-                    actualizados += 1
-
-            messages.success(request, f"Carga completada: {nuevos} nuevos, {actualizados} actualizados.")
+                count += 1
+                if created: nuevos += 1
+            
+            
+            return JsonResponse({
+                "status": "success", 
+                "message": f"¡Proceso finalizado! {count} productos procesados ({nuevos} nuevos)."
+            })
 
         except Exception as e:
-            messages.error(request, f"Error procesando archivo: {e}")
+           
+            return JsonResponse({"status": "error", "message": f"Error interno: {str(e)}"})
 
-        return redirect(next_url)
-
+    # Si entran por URL directa, mostramos el HTML normal
     return render(request, "carga_datos.html")
 
 
@@ -481,8 +623,8 @@ def exportar_excel(request):
 
     return response
 # ============================================================
-# FACTURACIÓN
-# ============================================================
+# 9. FACTURACIÓN
+# ===============================   =============================
 @login_required(login_url="index")
 def facturacion(request):
     productos = Producto.objects.all().order_by("nombre_producto")
@@ -512,12 +654,12 @@ def registrar_factura(request):
             producto = Producto.objects.get(id=item["id"])
             cantidad = int(item["cantidad"])
 
-            # Descontar stock
+            
             producto.stock_actual -= cantidad
             producto.en_alerta_stock = producto.stock_actual <= producto.stock_minimo
             producto.save()
 
-            # Crear detalle
+            
             DetalleFactura.objects.create(
                 factura=factura,
                 producto=producto,
