@@ -37,7 +37,8 @@
       <!-- BUSCADOR -->
       <form method="get" class="d-flex gap-2">
         <input type="search" class="form-control" name="q" value="{{ search_query }}"
-               placeholder="Buscar por nombre, marca o categoría...">
+               placeholder="Buscar por nombre, marca o categoría..."
+                maxlength="20">
         <button type="submit" class="btn btn-primary">Buscar</button>
 
         {% if search_query or request.GET.f_categoria or request.GET.f_marca %}
@@ -228,28 +229,30 @@
 
           <div class="mb-3">
             <label class="form-label">Descripción</label>
-            <textarea name="descripcion" class="form-control"></textarea>
+            <textarea name="descripcion" class="form-control" required></textarea>
           </div>
 
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Categoría</label>
-              <select name="categoria" class="form-select">
-                <option value="">Sin categoría</option>
+              <select name="categoria" class="form-select" required>
+                <option value="" disabled selected>Seleccione una categoría</option>
                 {% for c in categorias %}
-                  <option value="{{ c.id }}">{{ c.nombre_categoria }}</option>
+                    <option value="{{ c.id }}">{{ c.nombre_categoria }}</option>
                 {% endfor %}
               </select>
+
             </div>
 
             <div class="col-md-6">
-              <label class="form-label">Marca</label>
-              <select name="marca" class="form-select">
-                <option value="">Sin marca</option>
-                {% for m in marcas %}
-                  <option value="{{ m.id }}">{{ m.nombre_marca }}</option>
-                {% endfor %}
-              </select>
+              <label class="form-label">Marca *</label>
+                <select name="marca" class="form-select" required>
+                  <option value="" disabled selected>Seleccione una marca</option>
+                  {% for m in marcas %}
+                    <option value="{{ m.id }}">{{ m.nombre_marca }}</option>
+                  {% endfor %}
+                </select>
+
             </div>
           </div>
 

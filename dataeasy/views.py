@@ -173,23 +173,34 @@ def lista_inventario(request):
 @login_required(login_url="index")
 def crear_producto(request):
     if request.method == "POST":
-        categoria = Categoria.objects.filter(id=request.POST.get("categoria")).first()
-        marca = Marca.objects.filter(id=request.POST.get("marca")).first()
+        nombre = request.POST.get("nombre_producto").strip()
+        descripcion = request.POST.get("descripcion")
+        categoria_id = request.POST.get("categoria")
+        marca_id = request.POST.get("marca")
+        stock_actual = int(request.POST.get("stock_actual", 0))
+        stock_minimo = int(request.POST.get("stock_minimo", 0))
+
+        # 🔍 VALIDACIÓN: evitar productos duplicados
+        if Producto.objects.filter(nombre_producto__iexact=nombre).exists():
+            messages.error(request, f"❌ Ya existe un producto con el nombre '{nombre}'.")
+            return redirect("inventario_lista")
+
+        categoria = Categoria.objects.filter(id=categoria_id).first()
+        marca = Marca.objects.filter(id=marca_id).first()
 
         Producto.objects.create(
-            nombre_producto=request.POST.get("nombre_producto"),
-            descripcion=request.POST.get("descripcion"),
+            nombre_producto=nombre,
+            descripcion=descripcion,
             categoria=categoria,
             marca=marca,
-            stock_actual=int(request.POST.get("stock_actual", 0)),
-            stock_minimo=int(request.POST.get("stock_minimo", 0)),
+            stock_actual=stock_actual,
+            stock_minimo=stock_minimo,
         )
 
         messages.success(request, "Producto creado correctamente.")
         return redirect("inventario_lista")
 
     return redirect("inventario_lista")
-
 
 # ============================================================
 # EDITAR PRODUCTO
@@ -521,66 +532,121 @@ def carga_datos(request):
 
         try:
             archivo = request.FILES["archivo_excel"]
-            
 
             df = pd.read_excel(archivo)
 
-
+            # Normalizar nombres de columnas
             def limpiar(txt):
-                return str(txt).strip().lower().replace(" ", "_").replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u")
-
+                return (
+                    str(txt)
+                    .strip()
+                    .lower()
+                    .replace(" ", "_")
+                    .replace("á", "a")
+                    .replace("é", "e")
+                    .replace("í", "i")
+                    .replace("ó", "o")
+                    .replace("ú", "u")
+                )
 
             df.columns = [limpiar(c) for c in df.columns]
 
- 
+            # Columnas obligatorias
             cols_ok = ["nombre_producto", "categoria", "marca", "stock_actual"]
             faltan = [c for c in cols_ok if c not in df.columns]
 
             if faltan:
-                return JsonResponse({"status": "error", "message": f"Faltan columnas en el Excel: {', '.join(faltan)}"})
+                return JsonResponse({
+                    "status": "error",
+                    "message": f"Faltan columnas en el Excel: {', '.join(faltan)}"
+                })
 
-           
             count = 0
             nuevos = 0
-            for _, row in df.iterrows():
-                if pd.isna(row.get("nombre_producto")): continue
-                
 
+            for _, row in df.iterrows():
+                if pd.isna(row.get("nombre_producto")):
+                    continue
+
+                # --- Categoría ---
                 cat_obj = None
                 if pd.notna(row.get("categoria")):
-                    cat_obj, _ = Categoria.objects.get_or_create(nombre_categoria=str(row["categoria"]).strip())
-                
+                    cat_obj, _ = Categoria.objects.get_or_create(
+                        nombre_categoria=str(row["categoria"]).strip()
+                    )
+
+                # --- Marca ---
                 marca_obj = None
                 if pd.notna(row.get("marca")):
-                    marca_obj, _ = Marca.objects.get_or_create(nombre_marca=str(row["marca"]).strip())
+                    marca_obj, _ = Marca.objects.get_or_create(
+                        nombre_marca=str(row["marca"]).strip()
+                    )
 
-                
+                # =====================================================
+                # VALIDACIÓN NUMÉRICA PARA stock_actual Y stock_minimo
+                # =====================================================
+
+                # Validar stock_actual
+                try:
+                    stock_actual_val = int(row.get("stock_actual", 0))
+                except:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": f"❌ El valor de stock_actual debe ser numérico. Revisa el producto: {row.get('nombre_producto')}"
+                    })
+
+                if stock_actual_val < 0:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": f"❌ No se permiten números negativos en stock_actual. Producto: {row.get('nombre_producto')}"
+                    })
+
+                # Validar stock_minimo
+                try:
+                    stock_minimo_val = int(row.get("stock_minimo", 5))
+                except:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": f"❌ El valor de stock_minimo debe ser numérico. Revisa el producto: {row.get('nombre_producto')}"
+                    })
+
+                if stock_minimo_val < 0:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": f"❌ No se permiten números negativos en stock_minimo. Producto: {row.get('nombre_producto')}"
+                    })
+
+                # =====================================================
+                # GUARDADO FINAL
+                # =====================================================
                 _, created = Producto.objects.update_or_create(
                     nombre_producto=row["nombre_producto"],
                     defaults={
                         "categoria": cat_obj,
                         "marca": marca_obj,
-                        "stock_actual": int(row.get("stock_actual", 0)),
-                        "stock_minimo": int(row.get("stock_minimo", 5)),
+                        "stock_actual": stock_actual_val,
+                        "stock_minimo": stock_minimo_val,
                         "descripcion": row.get("descripcion", "")
                     }
                 )
+
                 count += 1
-                if created: nuevos += 1
-            
-            
+                if created:
+                    nuevos += 1
+
             return JsonResponse({
-                "status": "success", 
+                "status": "success",
                 "message": f"¡Proceso finalizado! {count} productos procesados ({nuevos} nuevos)."
             })
 
         except Exception as e:
-           
-            return JsonResponse({"status": "error", "message": f"Error interno: {str(e)}"})
+            return JsonResponse({
+                "status": "error",
+                "message": f"Error interno: {str(e)}"
+            })
 
     # Si entran por URL directa, mostramos el HTML normal
     return render(request, "carga_datos.html")
-
 
 # ============================================================
 # EXPORTAR EXCEL

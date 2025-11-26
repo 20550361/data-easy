@@ -61,7 +61,10 @@
             {% for usuario in lista_usuarios %}
             <tr>
                 <td><strong>{{ usuario.username }}</strong></td>
-                <td>{{ usuario.email|default:"N/A" }}</td>
+
+                <!-- Si el email está vacío, mostramos un texto obligatorio -->
+                <td>{{ usuario.email|default:"No proporcionado" }}</td>
+
                 <td>
                     {% if usuario.is_superuser %}
                         <span class="badge badge-admin">Super Admin</span>
@@ -71,14 +74,19 @@
                         <span class="badge badge-user">Usuario</span>
                     {% endif %}
                 </td>
+
                 <td>{{ usuario.date_joined|date:"d M Y" }}</td>
+
                 <td>
                     <a href="{% url 'usuario_editar' usuario.id %}" class="btn-edit">✏️ Editar</a>
 
                     {% if not usuario.is_superuser %}
                     <form action="{% url 'usuario_eliminar' usuario.id %}" method="post" style="display:inline;">
                         {% csrf_token %}
-                        <button type="submit" class="btn-delete" onclick="return confirm('¿Seguro que deseas eliminar al usuario {{ usuario.username }}?');">🗑️ Eliminar</button>
+                        <button type="submit" class="btn-delete"
+                            onclick="return confirm('¿Seguro que deseas eliminar al usuario {{ usuario.username }}?');">
+                            🗑️ Eliminar
+                        </button>
                     </form>
                     {% endif %}
                 </td>

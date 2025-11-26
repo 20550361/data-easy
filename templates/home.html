@@ -45,8 +45,6 @@
     </div>
 </form>
 
-
-
 <div id="dash-producto" class="dashboard-section">
     
     <section class="stats-summary">
@@ -94,7 +92,6 @@
     </div>
 </div>
 
-
 <div id="dash-categoria" class="dashboard-section" style="display:none;">
     
     <section class="stats-summary" style="grid-template-columns: repeat(1, 1fr);">
@@ -119,7 +116,6 @@
         </div>
     </div>
 </div>
-
 
 <div id="dash-marca" class="dashboard-section" style="display:none;">
     
@@ -146,9 +142,7 @@
     </div>
 </div>
 
-
-
-{% endblock %}
+{% endblock content %}
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -230,23 +224,15 @@ document.addEventListener("DOMContentLoaded", () => {
 ===========================================*/
 
 /* ===========================================
-   DEFINICIÓN DE PALETA DE COLORES (Global para consistencia)
+   DEFINICIÓN DE PALETA DE COLORES
 ===========================================*/
 const paletaColores = [
-    '#4e79a7', // Azul
-    '#f28e2b', // Naranja
-    '#e15759', // Rojo
-    '#76b7b2', // Turquesa
-    '#59a14f', // Verde
-    '#edc948', // Amarillo
-    '#b07aa1', // Lila
-    '#ff9da7', // Rosa
-    '#9c755f', // Café
-    '#bab0ac'  // Gris
+    '#4e79a7', '#f28e2b', '#e15759', '#76b7b2', '#59a14f',
+    '#edc948', '#b07aa1', '#ff9da7', '#9c755f', '#bab0ac'
 ];
 
 /* ===========================================
-   GRÁFICO 1: STOCK POR CATEGORÍA (PASTEL)
+   GRÁFICO 1: STOCK POR CATEGORÍA
 ===========================================*/
 if(document.getElementById('stockCategoriaChart')) {
     new Chart(document.getElementById('stockCategoriaChart'), {
@@ -268,17 +254,15 @@ if(document.getElementById('stockCategoriaChart')) {
 }
 
 /* ===========================================
-   GRÁFICO 2: CRÍTICO POR CATEGORÍA (BARRAS)
+   GRÁFICO 2: CRÍTICO POR CATEGORÍA
 ===========================================*/
 if(document.getElementById('criticoCategoriaChart')) {
     
     const coloresDinamicos = data.stock_critico_categoria_labels.map(nombreCat => {
         const indiceEnPastel = data.stock_por_categoria_labels.indexOf(nombreCat);
-        if (indiceEnPastel >= 0) {
-            return paletaColores[indiceEnPastel % paletaColores.length];
-        } else {
-            return '#cccccc';
-        }
+        return indiceEnPastel >= 0 
+               ? paletaColores[indiceEnPastel % paletaColores.length]
+               : '#cccccc';
     });
 
     new Chart(document.getElementById('criticoCategoriaChart'), {
@@ -288,23 +272,15 @@ if(document.getElementById('criticoCategoriaChart')) {
             datasets: [{
                 label: 'Productos Críticos',
                 data: data.stock_critico_categoria_values,
-                backgroundColor: coloresDinamicos, 
+                backgroundColor: coloresDinamicos,
                 barThickness: 'flex', maxBarThickness: 40
             }]
         },
         options: { 
-            indexAxis: 'y', 
+            indexAxis: 'y',
             responsive: true, 
             maintainAspectRatio: false,
-            scales: {
-                x: { 
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1,    
-                        precision: 0    
-                    }
-                }
-            },
+            scales: { x: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } } },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -320,57 +296,7 @@ if(document.getElementById('criticoCategoriaChart')) {
 }
 
 /* ===========================================
-   GRÁFICO 4: CRÍTICO POR MARCA (BARRAS)
-===========================================*/
-if(document.getElementById('criticoMarcaChart')) {
-    const coloresMarcaDinamicos = data.stock_critico_marca_labels.map(nombreMarca => {
-        const indiceEnPastel = data.stock_por_marca_labels.indexOf(nombreMarca);
-        if (indiceEnPastel >= 0) {
-            return paletaColores[indiceEnPastel % paletaColores.length];
-        } else {
-            return '#cccccc';
-        }
-    });
-
-    new Chart(document.getElementById('criticoMarcaChart'), {
-        type: 'bar',
-        data: {
-            labels: data.stock_critico_marca_labels,
-            datasets: [{
-                label: 'Productos Críticos',
-                data: data.stock_critico_marca_values,
-                backgroundColor: coloresMarcaDinamicos,
-                barThickness: 'flex', maxBarThickness: 50
-            }]
-        },
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false,
-            scales: {
-                y: {  
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1,    
-                        precision: 0    
-                    }
-                }
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        afterBody: function(context) {
-                            return data.stock_critico_marca_tooltips[context[0].dataIndex];
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-/* ===========================================
-   GRÁFICO 3: STOCK POR MARCA (PASTEL)
+   GRÁFICO 3: STOCK POR MARCA
 ===========================================*/
 if(document.getElementById('stockMarcaChart')) {
     new Chart(document.getElementById('stockMarcaChart'), {
@@ -391,5 +317,83 @@ if(document.getElementById('stockMarcaChart')) {
     });
 }
 
+/* ===========================================
+   GRÁFICO 4: CRÍTICO POR MARCA
+===========================================*/
+if(document.getElementById('criticoMarcaChart')) {
+    const coloresMarcaDinamicos = data.stock_critico_marca_labels.map(nombreMarca => {
+        const indiceEnPastel = data.stock_por_marca_labels.indexOf(nombreMarca);
+        return indiceEnPastel >= 0
+               ? paletaColores[indiceEnPastel % paletaColores.length]
+               : '#cccccc';
+    });
+
+    new Chart(document.getElementById('criticoMarcaChart'), {
+        type: 'bar',
+        data: {
+            labels: data.stock_critico_marca_labels,
+            datasets: [{
+                label: 'Productos Críticos',
+                data: data.stock_critico_marca_values,
+                backgroundColor: coloresMarcaDinamicos,
+                barThickness: 'flex', maxBarThickness: 50
+            }]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } } },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        afterBody: function(context) {
+                            return data.stock_critico_marca_tooltips[context[0].dataIndex];
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
 </script>
+
+<script>
+// *** VALIDACIÓN DE FECHAS — AISLADA, NO INTERFIERE EN NADA ***
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const inputDesde = document.querySelector("input[name='fecha_inicio']");
+    const inputHasta = document.querySelector("input[name='fecha_fin']");
+
+    if (!inputDesde || !inputHasta) return;
+
+    // Fecha actual
+    const hoy = new Date().toISOString().split("T")[0];
+
+    // Limitar "hasta" a hoy
+    inputHasta.max = hoy;
+
+    function validarFechas() {
+        const desde = inputDesde.value;
+        const hasta = inputHasta.value;
+
+        if (hasta > hoy) {
+            inputHasta.value = hoy;
+            alert("La fecha 'Hasta' no puede superar la fecha actual.");
+        }
+
+        if (desde && hasta && desde > hasta) {
+            inputDesde.value = hasta;
+            alert("La fecha 'Desde' no puede ser mayor que 'Hasta'.");
+        }
+    }
+
+    inputDesde.addEventListener("change", validarFechas);
+    inputHasta.addEventListener("change", validarFechas);
+
+});
+</script>
+
+
 {% endblock %}
