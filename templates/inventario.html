@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %} 
 {% load static %}
 
 {% block title %}Inventario - DataEasy{% endblock %}
@@ -19,14 +19,14 @@
 {% block content %}
 <div class="container-fluid px-0">
 
-  <!-- TÍTULO + ACCIONES -->
+  <!-- TÍTULO + BUSCADOR -->
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-3">
     <div>
       <h2 class="h4 mb-1">📦 Inventario</h2>
       <p class="text-muted mb-0">Gestiona todos los productos de tu inventario.</p>
     </div>
 
-    <div class="d-flex flex-wrap gap-2 align-items-center">
+    <div class="d-flex gap-2 align-items-center">
 
       {% if solo_alertas %}
         <a href="{% url 'inventario_lista' %}" class="btn btn-warning">Ver todos</a>
@@ -34,14 +34,12 @@
         <a href="?solo_alertas=1" class="btn btn-warning">Solo alertas ({{ total_alertas }})</a>
       {% endif %}
 
-      <!-- BUSCADOR -->
       <form method="get" class="d-flex gap-2">
         <input type="search" class="form-control" name="q" value="{{ search_query }}"
-               placeholder="Buscar por nombre, marca o categoría..."
-                maxlength="20">
+               placeholder="Buscar por producto, marca o categoría...">
         <button type="submit" class="btn btn-primary">Buscar</button>
 
-        {% if search_query or request.GET.f_categoria or request.GET.f_marca %}
+        {% if search_query %}
           <a href="{% url 'inventario_lista' %}" class="btn btn-outline-secondary">Limpiar</a>
         {% endif %}
       </form>
@@ -57,6 +55,8 @@
 
     </div>
   </div>
+
+
   <!-- TARJETAS -->
   <div class="row g-3 mb-3">
     <div class="col-auto">
@@ -73,12 +73,14 @@
     </div>
   </div>
 
+
   {% if total_alertas %}
   <div class="alert alert-warning d-flex align-items-center mb-3">
     <span class="me-2">⚠️</span>
     <div>Hay <strong>{{ total_alertas }}</strong> productos con stock bajo o sin stock.</div>
   </div>
   {% endif %}
+
 
   <!-- TABLA -->
   <div class="card border-0 shadow-sm">
@@ -88,66 +90,14 @@
           <thead class="table-light">
             <tr>
               <th>Producto</th>
-
-              <!-- FILTRO DENTRO DE CATEGORÍA -->
-              <th>
-                Categoría
-                <form method="get">
-                  <select name="f_categoria" class="form-select form-select-sm mt-1" onchange="this.form.submit()">
-                    <option value="">Todas</option>
-                    {% for c in categorias %}
-                      <option value="{{ c.id }}" {% if request.GET.f_categoria == c.id|stringformat:'s' %}selected{% endif %}>
-                        {{ c.nombre_categoria }}
-                      </option>
-                    {% endfor %}
-                  </select>
-
-                  <!-- Mantener otros filtros -->
-                  {% if request.GET.f_marca %}
-                    <input type="hidden" name="f_marca" value="{{ request.GET.f_marca }}">
-                  {% endif %}
-                  {% if request.GET.q %}
-                    <input type="hidden" name="q" value="{{ request.GET.q }}">
-                  {% endif %}
-                  {% if solo_alertas %}
-                    <input type="hidden" name="solo_alertas" value="1">
-                  {% endif %}
-                </form>
-              </th>
-
-              <!-- FILTRO DENTRO DE MARCA -->
-              <th>
-                Marca
-                <form method="get">
-                  <select name="f_marca" class="form-select form-select-sm mt-1" onchange="this.form.submit()">
-                    <option value="">Todas</option>
-                    {% for m in marcas %}
-                      <option value="{{ m.id }}" {% if request.GET.f_marca == m.id|stringformat:'s' %}selected{% endif %}>
-                        {{ m.nombre_marca }}
-                      </option>
-                    {% endfor %}
-                  </select>
-
-                  <!-- Mantener otros filtros -->
-                  {% if request.GET.f_categoria %}
-                    <input type="hidden" name="f_categoria" value="{{ request.GET.f_categoria }}">
-                  {% endif %}
-                  {% if request.GET.q %}
-                    <input type="hidden" name="q" value="{{ request.GET.q }}">
-                  {% endif %}
-                  {% if solo_alertas %}
-                    <input type="hidden" name="solo_alertas" value="1">
-                  {% endif %}
-                </form>
-              </th>
-
+              <th>Categoría</th>
+              <th>Marca</th>
               <th class="text-end">Stock actual</th>
               <th class="text-end">Stock mínimo</th>
               <th>Estado</th>
               <th class="text-center">Acciones</th>
             </tr>
           </thead>
-
           <tbody>
 
             {% for producto in page_obj %}
@@ -170,11 +120,13 @@
                 </td>
 
                 <td class="text-center">
+
                   <!-- BOTÓN EDITAR -->
                   <button type="button"
                           class="btn btn-sm btn-outline-primary me-1 btn-edit"
                           data-bs-toggle="modal"
                           data-bs-target="#modalEditarProducto"
+
                           data-url="{% url 'inventario_editar' producto.id %}"
                           data-nombre="{{ producto.nombre_producto }}"
                           data-descripcion="{{ producto.descripcion }}"
@@ -194,6 +146,7 @@
                           data-nombre="{{ producto.nombre_producto }}">
                     Eliminar
                   </button>
+
                 </td>
               </tr>
               {% endwith %}
@@ -210,6 +163,32 @@
       </div>
     </div>
   </div>
+
+
+  <!-- PAGINACIÓN -->
+  <div class="d-flex justify-content-between align-items-center mt-3">
+    <span class="text-muted">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}.</span>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+          <li class="page-item"><a class="page-link" href="?page=1">« Primera</a></li>
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a></li>
+        {% endif %}
+
+        {% if page_obj.has_next %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Siguiente</a></li>
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Última »</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+  </div>
+
+</div>
+
+
 <!-- MODAL NUEVO PRODUCTO -->
 <div class="modal fade" id="modalNuevoProducto" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -229,30 +208,28 @@
 
           <div class="mb-3">
             <label class="form-label">Descripción</label>
-            <textarea name="descripcion" class="form-control" required></textarea>
+            <textarea name="descripcion" class="form-control"></textarea>
           </div>
 
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Categoría</label>
-              <select name="categoria" class="form-select" required>
-                <option value="" disabled selected>Seleccione una categoría</option>
+              <select name="categoria" class="form-select">
+                <option value="">Sin categoría</option>
                 {% for c in categorias %}
-                    <option value="{{ c.id }}">{{ c.nombre_categoria }}</option>
+                  <option value="{{ c.id }}">{{ c.nombre_categoria }}</option>
                 {% endfor %}
               </select>
-
             </div>
 
             <div class="col-md-6">
-              <label class="form-label">Marca *</label>
-                <select name="marca" class="form-select" required>
-                  <option value="" disabled selected>Seleccione una marca</option>
-                  {% for m in marcas %}
-                    <option value="{{ m.id }}">{{ m.nombre_marca }}</option>
-                  {% endfor %}
-                </select>
-
+              <label class="form-label">Marca</label>
+              <select name="marca" class="form-select">
+                <option value="">Sin marca</option>
+                {% for m in marcas %}
+                  <option value="{{ m.id }}">{{ m.nombre_marca }}</option>
+                {% endfor %}
+              </select>
             </div>
           </div>
 
@@ -277,6 +254,8 @@
     </div>
   </div>
 </div>
+
+
 <!-- MODAL EDITAR -->
 <div class="modal fade" id="modalEditarProducto" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -342,6 +321,8 @@
     </div>
   </div>
 </div>
+
+
 <!-- MODAL ELIMINAR -->
 <div class="modal fade" id="modalEliminarProducto" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
@@ -364,6 +345,7 @@
   </div>
 </div>
 
+
 <!-- =============================================== -->
 <!-- JAVASCRIPT: LLENAR MODALES (EDITAR + ELIMINAR) -->
 <!-- =============================================== -->
@@ -375,9 +357,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     editButtons.forEach(btn => {
         btn.addEventListener("click", () => {
-
+            // URL correcta
             editForm.action = btn.dataset.url;
 
+            // llenar datos
             editForm.querySelector("input[name='nombre_producto']").value = btn.dataset.nombre;
             editForm.querySelector("textarea[name='descripcion']").value = btn.dataset.descripcion;
             editForm.querySelector("select[name='categoria']").value = btn.dataset.categoria;
@@ -387,6 +370,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
+    // ELIMINAR
     const deleteButtons = document.querySelectorAll(".btn-delete");
     const deleteForm = document.querySelector("#modalEliminarProducto form");
     const deleteName = document.querySelector("#delete-product-name");
@@ -462,5 +446,6 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 {% endif %}
+
 
 {% endblock %}

@@ -1,31 +1,81 @@
+{% extends 'base.html' %}
 {% load static %}
 
-<section class="user-info-card">
+{% block title %}Perfil - DataEasy{% endblock %}
 
-  <h2 class="text-center mb-3">Información de usuario</h2>
+{% block styles %}
+<link rel="stylesheet" href="{% static 'css/perfil.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="user-info-card">
+  <h2>Información de usuario</h2>
 
   <form class="user-info-form">
-
-    <div class="form-group mb-3">
-      <label><strong>Nombre de usuario:</strong></label>
-      <input type="text" value="{{ user.username }}" disabled class="form-control">
+    <div class="form-group">
+      <label>Nombre de usuario:</label>
+      <input type="text" value="{{ user.username }}" disabled>
     </div>
 
-    <div class="form-group mb-3">
-      <label><strong>Cargo:</strong></label>
-      <input type="text" value="Administrador" disabled class="form-control">
+    <div class="form-group">
+      <label>Cargo:</label>
+      <input type="text" value="Administrador" disabled>
     </div>
 
-    <div class="form-group mb-3">
-      <label><strong>Correo electrónico:</strong></label>
-      <input type="email" value="{{ user.email }}" disabled class="form-control">
+    <div class="form-group">
+      <label>Correo electrónico:</label>
+      <input type="email" id="emailInput" placeholder="correo@ejemplo.com" disabled>
     </div>
 
-    <div class="form-group mb-3">
-      <label><strong>Número de teléfono:</strong></label>
-      <input type="text" value="+56 9 0000 0000" disabled class="form-control">
+    <div class="form-group">
+      <label>Número de teléfono:</label>
+      <input type="text" id="phoneInput" placeholder="+56 9 0000 0000" disabled>
     </div>
 
+    <div class="button-group">
+      <button type="button" id="editBtn" class="edit-btn">✏️ Editar información</button>
+      <button type="button" id="saveBtn" class="save-btn hidden">💾 Guardar cambios</button>
+    </div>
   </form>
-
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // === Guardado local ===
+  const username = "{{ user.username|escapejs }}";
+  const keyEmail = `profile_email_${username}`;
+  const keyPhone = `profile_phone_${username}`;
+  const emailInput = document.getElementById('emailInput');
+  const phoneInput = document.getElementById('phoneInput');
+  const editBtn = document.getElementById('editBtn');
+  const saveBtn = document.getElementById('saveBtn');
+
+  // Cargar datos guardados
+  document.addEventListener('DOMContentLoaded', () => {
+    const savedEmail = localStorage.getItem(keyEmail);
+    const savedPhone = localStorage.getItem(keyPhone);
+    if (savedEmail) emailInput.value = savedEmail;
+    if (savedPhone) phoneInput.value = savedPhone;
+  });
+
+  // Modo edición
+  editBtn.addEventListener('click', () => {
+    emailInput.disabled = false;
+    phoneInput.disabled = false;
+    editBtn.classList.add('hidden');
+    saveBtn.classList.remove('hidden');
+  });
+
+  // Guardar cambios
+  saveBtn.addEventListener('click', () => {
+    localStorage.setItem(keyEmail, emailInput.value.trim());
+    localStorage.setItem(keyPhone, phoneInput.value.trim());
+    emailInput.disabled = true;
+    phoneInput.disabled = true;
+    saveBtn.classList.add('hidden');
+    editBtn.classList.remove('hidden');
+    alert("✅ Cambios guardados correctamente.");
+  });
+</script>
+{% endblock %}

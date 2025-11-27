@@ -25,6 +25,9 @@
                 <button type="submit">Entrar</button>
             </form>
 
+            <p class="forgot-password-link">
+                <a href="{% url 'recuperacion' %}">¿Olvidaste tu contraseña?</a>
+            </p>
 
             {% if messages %}
                 {% for message in messages %}
