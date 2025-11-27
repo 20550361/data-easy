@@ -16,7 +16,7 @@
         border-radius: 8px;
         text-decoration: none;
         font-weight: 600;
-        transition: all 0.2s ease;
+        transition: 0.2s;
     }
     .btn-primary { background: #2C3E50; color: #fff; }
     .btn-edit { background: #3498DB; color: #fff; margin-right: 6px; }
@@ -24,17 +24,9 @@
     .btn-edit:hover { background: #217dbb; }
     .btn-delete:hover { background: #c0392b; }
 
-    .table-container table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 16px;
-    }
-    table th, table td {
-        padding: 10px;
-        border-bottom: 1px solid #ddd;
-        text-align: left;
-    }
-    table th { background: #f8f9fa; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+    th { background: #f8f9fa; }
 </style>
 {% endblock %}
 
@@ -46,49 +38,57 @@
     <a href="{% url 'usuario_crear' %}" class="btn-primary">➕ Crear Nuevo Usuario</a>
 </div>
 
-<div class="table-container">
-    <table>
-        <thead>
-            <tr>
-                <th>Usuario</th>
-                <th>Email</th>
-                <th>Rol</th>
-                <th>Miembro desde</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for usuario in lista_usuarios %}
-            <tr>
-                <td><strong>{{ usuario.username }}</strong></td>
-                <td>{{ usuario.email|default:"N/A" }}</td>
-                <td>
-                    {% if usuario.is_superuser %}
-                        <span class="badge badge-admin">Super Admin</span>
-                    {% elif usuario.is_staff %}
-                        <span class="badge badge-staff">Staff</span>
-                    {% else %}
-                        <span class="badge badge-user">Usuario</span>
-                    {% endif %}
-                </td>
-                <td>{{ usuario.date_joined|date:"d M Y" }}</td>
-                <td>
-                    <a href="{% url 'usuario_editar' usuario.id %}" class="btn-edit">✏️ Editar</a>
+<table>
+    <thead>
+        <tr>
+            <th>Usuario</th>
+            <th>Email</th>
+            <th>Rol</th>
+            <th>Estado</th>
+            <th>Miembro desde</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
 
-                    {% if not usuario.is_superuser %}
-                    <form action="{% url 'usuario_eliminar' usuario.id %}" method="post" style="display:inline;">
-                        {% csrf_token %}
-                        <button type="submit" class="btn-delete" onclick="return confirm('¿Seguro que deseas eliminar al usuario {{ usuario.username }}?');">🗑️ Eliminar</button>
-                    </form>
-                    {% endif %}
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="5">No se encontraron usuarios.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+    <tbody>
+    {% for usuario in lista_usuarios %}
+        <tr>
+            <td>{{ usuario.username }}</td>
+            <td>{{ usuario.email|default:"(Obligatorio)" }}</td>
+
+            <td>
+                {% if usuario.is_superuser %}
+                    <span class="badge badge-admin">Super Admin</span>
+                {% elif usuario.is_staff %}
+                    <span class="badge badge-staff">Staff</span>
+                {% else %}
+                    <span class="badge badge-user">Usuario</span>
+                {% endif %}
+            </td>
+
+            <td>
+                {% if usuario.is_active %}
+                    ✔ Activo
+                {% else %}
+                    ❌ Inactivo
+                {% endif %}
+            </td>
+
+            <td>{{ usuario.date_joined|date:"d M Y" }}</td>
+
+            <td>
+                <a href="{% url 'usuario_editar' usuario.id %}" class="btn-edit">✏️ Editar</a>
+
+                {% if not usuario.is_superuser %}
+                <form action="{% url 'usuario_eliminar' usuario.id %}" method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <button class="btn-delete" onclick="return confirm('¿Eliminar usuario {{ usuario.username }}?');">🗑️ Eliminar</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
 {% endblock %}
