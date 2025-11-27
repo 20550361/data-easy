@@ -38,7 +38,6 @@ urlpatterns = [
     # --- Datos y Analíticas ---
     path('estadisticas/', views.estadisticas, name='estadisticas'),
     path('carga_datos/', views.carga_datos, name='carga_datos'),
-    path('api/chart-data/', views.chart_data_api, name='chart_data_api'),
 
     # --- Facturación REAL ---
     path('facturacion/', views.facturacion, name='facturacion'),
