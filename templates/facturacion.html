@@ -1,191 +1,110 @@
 {% extends 'base.html' %}
 
-{% block title %}Crear Movimiento{% endblock %}
-
 {% block content %}
+<h2>Crear Factura</h2>
 
-<h2>Crear Movimiento</h2>
+<div class="card p-3">
 
-<!-- =============================== -->
-<!-- ========== DATOS CLIENTE ====== -->
-<!-- =============================== -->
-
-<div class="card p-4 mb-4">
-
-    <h4>Datos del Cliente</h4>
-
-    <div class="row mt-3">
-
-        <div class="col-md-4">
-            <label>Nombre:</label>
-            <input type="text" id="clienteNombre" class="form-control">
-        </div>
-
-        <div class="col-md-4">
-            <label>Apellido:</label>
-            <input type="text" id="clienteApellido" class="form-control">
-        </div>
-
-        <div class="col-md-4">
-            <label>RUT:</label>
-            <input type="text" id="clienteRut" class="form-control">
-        </div>
-
-    </div>
-
-</div>
-
-
-<!-- =============================== -->
-<!-- ========== PRODUCTOS ========== -->
-<!-- =============================== -->
-
-<div class="card p-4">
+    <label>Nombre del Cliente:</label>
+    <input class="form-control mb-3" id="cliente">
 
     <h4>Productos</h4>
 
-    <div class="row mt-3">
-
-        <div class="col-md-6">
-            <label>Seleccione un producto:</label>
-            <select id="productoSelect" class="form-control">
-                <option value="">-- Seleccionar producto --</option>
-                {% for p in productos %}
-                    <option value="{{ p.id }}">{{ p.nombre_producto }}</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div class="col-md-3">
-            <label>Cantidad:</label>
-            <input type="number" id="cantidadInput" class="form-control" min="1">
-        </div>
-
-        <div class="col-md-3 d-flex align-items-end">
-            <button class="btn btn-success w-100" onclick="agregarProducto()">+ Agregar Producto</button>
-        </div>
-
-    </div>
-
-    <!-- TABLA -->
-    <table class="table mt-4">
+    <table class="table table-bordered" id="tabla">
         <thead>
-            <tr>
-                <th>Producto</th>
-                <th>Cantidad</th>
-                <th>Categoría</th>
-                <th>Marca</th>
-            </tr>
+        <tr>
+            <th>Producto</th>
+            <th>Cantidad</th>
+            <th>Precio</th>
+            <th>Subtotal</th>
+            <th></th>
+        </tr>
         </thead>
-
-        <tbody id="tablaProductos"></tbody>
+        <tbody></tbody>
     </table>
 
-    <button class="btn btn-primary mt-4 w-100" onclick="guardarFactura()">
-        Guardar y generar PDF
-    </button>
+    <button class="btn btn-success" onclick="agregarFila()">+ Agregar Producto</button>
+
+    <hr>
+    <h4>Total: $ <span id="total">0</span></h4>
+
+    <button class="btn btn-primary mt-3" onclick="guardarFactura()">Guardar y generar PDF</button>
 
 </div>
 
 
-<!-- =============================== -->
-<!-- ========== JAVASCRIPT ========= -->
-<!-- =============================== -->
-
 <script>
+// Lista de productos desde Django
+const PRODUCTOS = {{ productos|safe }};
 
-// LISTA INTERNA
-let productosFactura = [];
+function agregarFila(){
+    let tbody = document.querySelector("#tabla tbody");
 
-// ===============================
-// AGREGAR PRODUCTO A LA LISTA
-// ===============================
-function agregarProducto() {
+    let fila = `
+    <tr>
+        <td>
+            <select class="form-control producto">
+                ${PRODUCTOS.map(p => `<option value="${p.id}" data-precio="${p.precio}">${p.nombre_producto}</option>`).join("")}
+            </select>
+        </td>
+        <td><input type="number" class="form-control cantidad" value="1"></td>
+        <td class="precio">0</td>
+        <td class="subtotal">0</td>
+        <td><button class="btn btn-danger" onclick="this.closest('tr').remove(); calcularTotal()">X</button></td>
+    </tr>`;
 
-    const select = document.getElementById("productoSelect");
-    const productoId = select.value;
-    const productoNombre = select.selectedOptions[0].text;
-    const cantidad = parseInt(document.getElementById("cantidadInput").value);
+    tbody.insertAdjacentHTML("beforeend", fila);
+    calcularTotal();
+}
 
-    if (!productoId || cantidad <= 0) {
-        alert("Debes seleccionar un producto y una cantidad válida.");
-        return;
-    }
+document.addEventListener("input", calcularTotal);
 
-    // Agregar al array que se enviará al backend
-    productosFactura.push({
-        id: productoId,
-        cantidad: cantidad,
+function calcularTotal(){
+    let total = 0;
+
+    document.querySelectorAll("#tabla tbody tr").forEach(tr => {
+        let select = tr.querySelector(".producto");
+        let precio = parseFloat(select.selectedOptions[0].dataset.precio);
+        let cantidad = parseInt(tr.querySelector(".cantidad").value);
+
+        let subtotal = precio * cantidad;
+        tr.querySelector(".precio").innerText = precio;
+        tr.querySelector(".subtotal").innerText = subtotal;
+
+        total += subtotal;
     });
 
-    // Agregar a la tabla
-    const tabla = document.getElementById("tablaProductos");
-    const fila = document.createElement("tr");
-
-    fila.innerHTML = `
-        <td>${productoNombre}</td>
-        <td>${cantidad}</td>
-        <td>N/A</td>
-        <td>N/A</td>
-    `;
-
-    tabla.appendChild(fila);
+    document.getElementById("total").innerText = total;
 }
-// ===============================
-// ENVIAR FACTURA AL BACKEND
-// ===============================
-async function guardarFactura() {
 
-    const nombre = document.getElementById("clienteNombre").value;
-    const apellido = document.getElementById("clienteApellido").value;
-    const rut = document.getElementById("clienteRut").value;
+function guardarFactura(){
+    let cliente = document.getElementById("cliente").value;
 
-    if (!nombre || !apellido || !rut) {
-        alert("Debe completar todos los datos del cliente.");
-        return;
-    }
+    let items = [];
+    document.querySelectorAll("#tabla tbody tr").forEach(tr => {
+        items.push({
+            id: tr.querySelector(".producto").value,
+            cantidad: tr.querySelector(".cantidad").value,
+            precio: tr.querySelector(".precio").innerText,
+            subtotal: tr.querySelector(".subtotal").innerText
+        });
+    });
 
-    if (productosFactura.length === 0) {
-        alert("Debe agregar al menos un producto.");
-        return;
-    }
-
-    const payload = {
-        cliente_nombre: nombre,
-        cliente_apellido: apellido,
-        cliente_rut: rut,
-        items: productosFactura,
-    };
-
-    const response = await fetch("/facturacion/registrar/", {
+    fetch("{% url 'registrar_factura' %}", {
         method: "POST",
-        headers: { 
-            "Content-Type": "application/json",
-            "X-CSRFToken": getCSRFToken()
-        },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+            cliente: cliente,
+            items: items,
+            total: document.getElementById("total").innerText
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.status == "ok"){
+            window.location.href = "/facturacion/pdf/" + data.factura_id + "/";
+        }
     });
-
-    const data = await response.json();
-
-    if (data.status === "ok") {
-        alert("Factura registrada correctamente.");
-        window.location.href = `/factura/pdf/${data.factura_id}/`;
-    } else {
-        alert("Error al guardar la factura.");
-    }
 }
-
-
-// ===============================
-// OBTENER TOKEN CSRF
-// ===============================
-function getCSRFToken() {
-    return document.cookie.split("; ")
-        .find(row => row.startsWith("csrftoken="))
-        ?.split("=")[1];
-}
-
 </script>
 
 {% endblock %}

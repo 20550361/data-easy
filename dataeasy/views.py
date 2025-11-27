@@ -18,11 +18,9 @@ from django.http import HttpResponse, JsonResponse
 from xhtml2pdf import pisa 
 from django.template.loader import render_to_string
 
-from .models import Producto, Categoria, Marca, MovimientoInventario, Factura, DetalleFactura
-from django.contrib.auth.decorators import login_required
+from .models import Producto, Categoria, Marca, MovimientoInventario
 from .forms import UserCreateForm, UserUpdateForm
-from io import BytesIO
-from django.core.files.base import ContentFile
+
 
 # ============================================================
 # 2. LOGIN
@@ -454,45 +452,37 @@ def registrar_factura(request):
     if request.method == "POST":
         datos = json.loads(request.body)
 
-        # Datos del cliente
-        cliente_nombre = datos.get("cliente_nombre", "")
-        cliente_apellido = datos.get("cliente_apellido", "")
-        cliente_rut = datos.get("cliente_rut", "")
+        cliente = datos.get("cliente")
+        items = datos.get("items")
+        total = datos.get("total")
 
-        # Productos enviados desde JS
-        items = datos.get("items", [])
-
-        # Crear la factura (SIN TOTAL)
         factura = Factura.objects.create(
-            cliente_nombre=cliente_nombre,
-            cliente_apellido=cliente_apellido,
-            cliente_rut=cliente_rut
+            cliente=cliente,
+            total=total
         )
 
-        # Procesar items
         for item in items:
             producto = Producto.objects.get(id=item["id"])
             cantidad = int(item["cantidad"])
 
-            # Actualizar stock
+            # descontar stock
             producto.stock_actual -= cantidad
-           
+            producto.en_alerta_stock = producto.stock_actual <= producto.stock_minimo
             producto.save()
 
-            # Crear detalle
+            # crear detalle
             DetalleFactura.objects.create(
                 factura=factura,
                 producto=producto,
-                cantidad=cantidad
+                cantidad=cantidad,
+                precio=item["precio"],
+                subtotal=item["subtotal"]
             )
 
-            # Registrar movimiento
-            MovimientoInventario.objects.create(
-                producto=producto,
-                cantidad=cantidad
-            )
-
-        return JsonResponse({"status": "ok", "factura_id": factura.id})
+        return JsonResponse({
+            "status": "ok",
+            "factura_id": factura.id
+        })
 
     return JsonResponse({"status": "error"})
 
@@ -501,26 +491,13 @@ def factura_pdf(request, id):
     factura = Factura.objects.get(id=id)
     detalles = factura.detalles.all()
 
-    # 1) GENERAR PDF EN MEMORIA
     html = render_to_string("factura_pdf.html", {
         "factura": factura,
-        "detalles": detalles,
+        "detalles": detalles
     })
 
-    buffer_pdf = BytesIO()
-    pisa_status = pisa.CreatePDF(html, dest=buffer_pdf)
+    response = HttpResponse(content_type="application/pdf")
+    response['Content-Disposition'] = f'attachment; filename="factura_{id}.pdf"'
+    pisa_status = pisa.CreatePDF(html, dest=response)
 
-    if pisa_status.err:
-        return HttpResponse("Error generando el PDF", status=500)
-
-    # 2) GUARDAR PDF EN EL MODELO
-    nombre_archivo = f"factura_{factura.id}.pdf"
-    factura.archivo_pdf.save(nombre_archivo, ContentFile(buffer_pdf.getvalue()))
-    factura.save()
-
-    # 3) ENTREGAR PDF AL NAVEGADOR (DESCARGA)
-    response = HttpResponse(buffer_pdf.getvalue(), content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="{nombre_archivo}"'
     return response
-    
- 
