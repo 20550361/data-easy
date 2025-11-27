@@ -17,6 +17,7 @@ from django.contrib.auth.models import User
 from django.http import HttpResponse, JsonResponse
 from xhtml2pdf import pisa 
 from django.template.loader import render_to_string
+from django.db.models.functions import TruncWeek, TruncDay
 
 from .models import Producto, Categoria, Marca, MovimientoInventario, Factura, DetalleFactura
 from django.contrib.auth.decorators import login_required
@@ -243,7 +244,6 @@ def eliminar_usuario(request, pk):
 # 6. ESTADÍSTICAS
 # ============================================================
 def _build_estadisticas_context(request):
-
     fecha_inicio = request.GET.get("fecha_inicio")
     fecha_fin = request.GET.get("fecha_fin")
     hoy = timezone.now().date()
@@ -258,66 +258,75 @@ def _build_estadisticas_context(request):
     else:
         fecha_fin = hoy
 
-    movimientos = MovimientoInventario.objects.filter(
-        fecha_movimiento__date__range=[fecha_inicio, fecha_fin]
-    )
+    # 1. PRODUCTOS CRÍTICOS (Para los gráficos de barras)
+    productos_criticos = Producto.objects.filter(
+        stock_actual__lte=F("stock_minimo")
+    ).select_related('categoria', 'marca')
 
-    # ========== Datos generales ==========
-    productos_bajo = Producto.objects.filter(stock_actual__lt=F("stock_minimo"))
-    productos_sin = Producto.objects.filter(stock_actual=0)
+    
+    critico_cat_map = {}
+    critico_cat_tooltips = {}
+    for p in productos_criticos:
+        cat = p.categoria.nombre_categoria if p.categoria else "Sin categoría"
+        if cat not in critico_cat_map:
+            critico_cat_map[cat] = 0
+            critico_cat_tooltips[cat] = []
+        critico_cat_map[cat] += 1
+        critico_cat_tooltips[cat].append(f"{p.nombre_producto} ({p.stock_actual})")
 
-    # ========== Gráficos ==========
-    movimientos_por_mes = (
-        movimientos.annotate(mes=TruncMonth("fecha_movimiento"))
-        .values("mes", "tipo_movimiento")
-        .annotate(total=Sum("cantidad"))
-        .order_by("mes")
-    )
+    
+    critico_marca_map = {}
+    critico_marca_tooltips = {}
+    for p in productos_criticos:
+        marca = p.marca.nombre_marca if p.marca else "Sin marca"
+        if marca not in critico_marca_map:
+            critico_marca_map[marca] = 0
+            critico_marca_tooltips[marca] = []
+        critico_marca_map[marca] += 1
+        critico_marca_tooltips[marca].append(f"{p.nombre_producto} ({p.stock_actual})")
 
-    meses = []
-    entradas = []
-    salidas = []
+    
+    def formatear_tooltips(diccionario):
+        lista_final = []
+        for key in diccionario: 
+            items = diccionario[key][:5]
+            if len(diccionario[key]) > 5:
+                items.append(f"... y {len(diccionario[key])-5} más")
+            lista_final.append(items)
+        return lista_final
 
-    curr = fecha_inicio.replace(day=1)
-    while curr <= fecha_fin:
-        key = curr.strftime("%Y-%m")
-        meses.append(key)
-        entradas.append(0)
-        salidas.append(0)
-        curr = (curr + timedelta(days=32)).replace(day=1)
-
-    for row in movimientos_por_mes:
-        m = row["mes"].strftime("%Y-%m")
-        idx = meses.index(m)
-
-        if row["tipo_movimiento"] == "entrada":
-            entradas[idx] = row["total"]
-        else:
-            salidas[idx] = row["total"]
-
+    # 2. CONSTRUCCIÓN DEL JSON COMPLETO
     chart_data = {
-        "meses": meses,
-        "entradas": entradas,
-        "salidas": salidas,
+       
         "stock_por_categoria_labels": [
-            c["categoria__nombre_categoria"] or "Sin categoría"
-            for c in Producto.objects.values("categoria__nombre_categoria")
-            .annotate(total=Sum("stock_actual"))
+            x["categoria__nombre_categoria"] or "Sin categoría"
+            for x in Producto.objects.values("categoria__nombre_categoria").annotate(t=Sum("stock_actual"))
         ],
         "stock_por_categoria_values": [
-            c["total"]
-            for c in Producto.objects.values("categoria__nombre_categoria")
-            .annotate(total=Sum("stock_actual"))
+            x["t"] for x in Producto.objects.values("categoria__nombre_categoria").annotate(t=Sum("stock_actual"))
         ],
-        "stock_critico_marca_labels": [
-            r["marca__nombre_marca"]
-            for r in productos_bajo.values("marca__nombre_marca").annotate(cantidad=Count("id"))
+        
+        "stock_por_marca_labels": [
+            x["marca__nombre_marca"] or "Sin marca"
+            for x in Producto.objects.values("marca__nombre_marca").annotate(t=Sum("stock_actual"))
         ],
-        "stock_critico_marca_values": [
-            r["cantidad"]
-            for r in productos_bajo.values("marca__nombre_marca").annotate(cantidad=Count("id"))
+        "stock_por_marca_values": [
+            x["t"] for x in Producto.objects.values("marca__nombre_marca").annotate(t=Sum("stock_actual"))
         ],
+
+        
+        "stock_critico_categoria_labels": list(critico_cat_map.keys()),
+        "stock_critico_categoria_values": list(critico_cat_map.values()),
+        "stock_critico_categoria_tooltips": formatear_tooltips(critico_cat_tooltips),
+
+        "stock_critico_marca_labels": list(critico_marca_map.keys()),
+        "stock_critico_marca_values": list(critico_marca_map.values()),
+        "stock_critico_marca_tooltips": formatear_tooltips(critico_marca_tooltips),
     }
+
+    
+    productos_sin = productos_criticos.filter(stock_actual=0)
+    productos_bajo = productos_criticos.filter(stock_actual__gt=0)
 
     return {
         "fecha_inicio": fecha_inicio,
@@ -327,11 +336,9 @@ def _build_estadisticas_context(request):
         "total_categorias": Categoria.objects.count(),
         "total_marcas": Marca.objects.count(),
         "total_productos": Producto.objects.count(),
-        "stock_total": Producto.objects.aggregate(total_stock=Sum("stock_actual"))["total_stock"],
-        "total_movimientos": movimientos.count(),
+        "stock_total": Producto.objects.aggregate(t=Sum("stock_actual"))["t"] or 0,
         "chart_data_json": json.dumps(chart_data, cls=DjangoJSONEncoder),
     }
-
 
 @login_required
 def estadisticas(request):
@@ -521,6 +528,66 @@ def factura_pdf(request, id):
     # 3) ENTREGAR PDF AL NAVEGADOR (DESCARGA)
     response = HttpResponse(buffer_pdf.getvalue(), content_type="application/pdf")
     response["Content-Disposition"] = f'attachment; filename="{nombre_archivo}"'
-    return response
+    return response      
+
+
+
+
+
+@login_required
+def chart_data_api(request):
+    """ API para alimentar el gráfico dinámico de movimientos (Mes/Semana/Día) """
+    rango = request.GET.get('rango', 'mes')
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
     
- 
+    hoy = timezone.now().date()
+    if not fecha_inicio:
+        fecha_inicio = hoy - timedelta(days=180)
+    else:
+        fecha_inicio = datetime.strptime(fecha_inicio, "%Y-%m-%d").date()
+        
+    if not fecha_fin:
+        fecha_fin = hoy
+    else:
+        fecha_fin = datetime.strptime(fecha_fin, "%Y-%m-%d").date()
+
+    if rango == 'semana':
+        trunc_func = TruncWeek('fecha_movimiento')
+        fmt = '%W-%Y'
+    elif rango == 'dia':
+        trunc_func = TruncDay('fecha_movimiento')
+        fmt = '%d/%m' 
+    else:
+        trunc_func = TruncMonth('fecha_movimiento')
+        fmt = '%Y-%m'
+
+    qs = MovimientoInventario.objects.filter(
+        fecha_movimiento__date__range=[fecha_inicio, fecha_fin]
+    ).annotate(
+        periodo=trunc_func
+    ).values(
+        'periodo', 'tipo_movimiento'
+    ).annotate(
+        total=Sum('cantidad')
+    ).order_by('periodo')
+
+    data_map = {}
+    for row in qs:
+        if not row['periodo']: continue
+        label = row['periodo'].strftime(fmt)
+        
+        if label not in data_map:
+            data_map[label] = {'entradas': 0, 'salidas': 0}
+        
+        if row['tipo_movimiento'] == 'entrada':
+            data_map[label]['entradas'] += row['total']
+        else:
+            data_map[label]['salidas'] += row['total']
+
+    labels = list(data_map.keys())
+    return JsonResponse({
+        "labels": labels,
+        "entradas": [data_map[k]['entradas'] for k in labels],
+        "salidas": [data_map[k]['salidas'] for k in labels]
+    })
