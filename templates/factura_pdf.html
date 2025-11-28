@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+    }
+
+    /* Encabezado */
+    .header {
+        text-align: left;
+        margin-bottom: 20px;
+    }
+
+    .empresa {
+        font-size: 22px;
+        font-weight: bold;
+    }
+
+    .factura-num {
+        font-size: 18px;
+        margin-top: 5px;
+    }
+
+    .info-cliente {
+        margin-top: 15px;
+        line-height: 1.5;
+        font-size: 14px;
+    }
+
+    /* Tabla de productos */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 25px;
+        font-size: 14px;
+    }
+
+    table, th, td {
+        border: 1px solid #555;
+    }
+
+    th {
+        background: #f0f0f0;
+        padding: 8px;
+        text-align: left;
+        font-weight: bold;
+    }
+
+    td {
+        padding: 8px;
+    }
+
+    /* Pie */
+    .footer {
+        margin-top: 40px;
+        font-size: 12px;
+        text-align: center;
+        color: #777;
+    }
+</style>
+</head>
+<body>
+
+    <!-- ENCABEZADO -->
+    <div class="header">
+        <div class="empresa">DATAEASY</div>
+        <div class="factura-num">Factura N° {{ factura.id }}</div>
+
+        <div class="info-cliente">
+            <strong>Cliente:</strong> {{ factura.cliente_nombre }} {{ factura.cliente_apellido }} <br>
+            <strong>RUT:</strong> {{ factura.cliente_rut }} <br>
+            <strong>Fecha:</strong> {{ factura.fecha|date:"d/m/Y H:i" }}
+        </div>
+    </div>
+
+    <!-- TABLA DE PRODUCTOS -->
+    <table>
+        <thead>
+            <tr>
+                <th style="width:40%;">Producto</th>
+                <th style="width:20%;">Categoría</th>
+                <th style="width:20%;">Marca</th>
+                <th style="width:20%;">Cantidad</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in detalles %}
+            <tr>
+                <td>{{ d.producto.nombre_producto }}</td>
+                <td>{{ d.producto.categoria.nombre_categoria }}</td>
+                <td>{{ d.producto.marca.nombre_marca }}</td>
+                <td>{{ d.cantidad }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- PIE -->
+    <div class="footer">
+        Generado automáticamente por DataEasy — {{ factura.fecha|date:"d/m/Y" }}
+    </div>
+
+</body>
+</html>
