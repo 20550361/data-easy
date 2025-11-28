@@ -451,13 +451,12 @@ def estadisticas(request):
     return render(request, "estadisticas.html", _build_estadisticas_context(request))
 
 
-@login_required(login_url="index")
+@login_required
 def chart_data_api(request):
     rango = request.GET.get('rango', 'mes')
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
     
-
     hoy = timezone.now().date()
     if not fecha_inicio:
         fecha_inicio = hoy - timedelta(days=180)
@@ -469,20 +468,17 @@ def chart_data_api(request):
     else:
         fecha_fin = datetime.strptime(fecha_fin, "%Y-%m-%d").date()
 
-
     if rango == 'semana':
         trunc_func = TruncWeek('fecha_movimiento')
+        fmt = '%W-%Y' # Semana-Año
     elif rango == 'dia':
         trunc_func = TruncDay('fecha_movimiento')
-        if (fecha_fin - fecha_inicio).days > 60: 
-            fecha_inicio = fecha_fin - timedelta(days=30)
+        fmt = '%d/%m' # Día/Mes
     else:
         trunc_func = TruncMonth('fecha_movimiento')
+        fmt = '%Y-%m'
 
-
-    qs = MovimientoInventario.objects.filter(
-        fecha_movimiento__date__range=[fecha_inicio, fecha_fin]
-    ).annotate(
+    qs = MovimientoInventario.objects.all().annotate(
         periodo=trunc_func
     ).values(
         'periodo', 'tipo_movimiento'
@@ -491,33 +487,23 @@ def chart_data_api(request):
     ).order_by('periodo')
 
     data_map = {}
-
     for row in qs:
-        fecha_obj = row['periodo']
+        if not row['periodo']: continue
+        label = row['periodo'].strftime(fmt)
         
-        if rango == 'semana':
-            label = f"Semana {fecha_obj.strftime('%W')}"
-        elif rango == 'dia':
-            label = fecha_obj.strftime('%d/%m')
-        else:
-            label = fecha_obj.strftime('%b-%Y')
-
         if label not in data_map:
             data_map[label] = {'entradas': 0, 'salidas': 0}
         
         if row['tipo_movimiento'] == 'entrada':
             data_map[label]['entradas'] += row['total']
-        elif row['tipo_movimiento'] == 'salida':
+        else:
             data_map[label]['salidas'] += row['total']
 
     labels = list(data_map.keys())
-    entradas = [data_map[k]['entradas'] for k in labels]
-    salidas = [data_map[k]['salidas'] for k in labels]
-
     return JsonResponse({
         "labels": labels,
-        "entradas": entradas,
-        "salidas": salidas
+        "entradas": [data_map[k]['entradas'] for k in labels],
+        "salidas": [data_map[k]['salidas'] for k in labels]
     })
 
 # ============================================================

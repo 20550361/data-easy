@@ -95,7 +95,7 @@ TIME_ZONE = 'America/Santiago' # Zona horaria de Chile
 
 USE_I18N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # --- 3. UBICACIÓN DE ARCHIVOS ESTÁTICOS (CSS, JS, Imágenes) ---
