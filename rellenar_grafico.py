@@ -4,10 +4,11 @@ import random
 from datetime import timedelta
 from django.utils import timezone
 
-# 1. Configurar Django para que funcione en este script suelto
+# 1. Configuración de Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'miweb.settings')
 django.setup()
 
+# 2. Importar tus modelos
 from dataeasy.models import Producto, MovimientoInventario
 
 def poblar_datos():
@@ -17,12 +18,11 @@ def poblar_datos():
     productos = list(Producto.objects.all())
     
     if not productos:
-        print("❌ ERROR: No hay productos. Carga el Excel primero.")
+        print("❌ ERROR: No hay productos. Carga productos primero.")
         return
 
     print(f"📦 2. Generando movimientos para {len(productos)} productos...")
     
-    # Generamos 200 movimientos distribuidos en los últimos 6 meses
     cantidad_movimientos = 200
     
     for i in range(cantidad_movimientos):
@@ -30,5 +30,23 @@ def poblar_datos():
         tipo = random.choice(['entrada', 'salida'])
         cantidad = random.randint(1, 15)
         
-        # Fecha aleatoria entre hoy y hace 180 días
+        # Generar fecha aleatoria (hasta 6 meses atrás)
         dias_atras = random.randint(0, 180)
+        fecha_real = timezone.now() - timedelta(days=dias_atras)
+
+        # PASO A: Crear el movimiento (Django pondrá la fecha de HOY automáticamente)
+        mov = MovimientoInventario.objects.create(
+            producto=producto,
+            tipo_movimiento=tipo,
+            cantidad=cantidad
+        )
+
+        # PASO B: Sobrescribir la fecha manualmente y guardar de nuevo
+        # Esto es obligatorio porque 'auto_now_add=True' impide poner fechas pasadas al crear
+        mov.fecha_movimiento = fecha_real
+        mov.save()
+
+    print(f"✅ ¡Listo! Se crearon {cantidad_movimientos} movimientos con fechas antiguas.")
+
+if __name__ == '__main__':
+    poblar_datos()
