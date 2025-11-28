@@ -440,4 +440,66 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 
+{% if total_alertas > 0 %}
+<div class="modal fade" id="alertaInventarioModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header 
+        {% if sin_stock_items.count > 0 %} bg-danger text-white
+        {% else %} bg-warning
+        {% endif %}">
+        <h5 class="modal-title">
+          {% if sin_stock_items.count > 0 %}
+            🔴 Productos sin stock
+          {% else %}
+            🟡 Productos con stock bajo
+          {% endif %}
+        </h5>
+      </div>
+
+      <div class="modal-body">
+
+        {% if sin_stock_items %}
+          <h6>🔴 Sin stock</h6>
+          <ul class="mb-3">
+            {% for p in sin_stock_items %}
+              <li><strong>{{ p.nombre_producto }}</strong>
+                — {{ p.categoria.nombre_categoria|default:"N/A" }}
+              </li>
+            {% endfor %}
+          </ul>
+          <hr>
+        {% endif %}
+
+        {% if bajo_stock_items %}
+          <h6>🟡 Stock bajo</h6>
+          <ul>
+            {% for p in bajo_stock_items %}
+              <li>
+                <strong>{{ p.nombre_producto }}</strong>
+                — {{ p.categoria.nombre_categoria|default:"N/A" }}
+                ({{ p.stock_actual }}/{{ p.stock_minimo }})
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var alertaModal = document.getElementById('alertaInventarioModal');
+    if (alertaModal) {
+        var modal = new bootstrap.Modal(alertaModal);
+        modal.show();
+    }
+});
+</script>
+{% endif %}
+
 {% endblock %}
