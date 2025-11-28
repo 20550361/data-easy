@@ -571,16 +571,12 @@ def exportar_excel(request):
         )
 
     data = [{
-        "Producto": p.nombre_producto,
-        "Categoría": p.categoria.nombre_categoria if p.categoria else "N/A",
-        "Marca": p.marca.nombre_marca if p.marca else "N/A",
-        "Stock actual": p.stock_actual,
-        "Stock mínimo": p.stock_minimo,
-        "Estado": (
-            "Sin stock" if p.stock_actual == 0 else
-            "Bajo stock" if p.stock_actual <= p.stock_minimo else
-            "Normal"
-        )
+        "nombre_product": p.nombre_producto,
+        "descripcion": p.descripcion or "",
+        "categoria": p.categoria.nombre_categoria if p.categoria else "",
+        "marca": p.marca.nombre_marca if p.marca else "",
+        "stock_actua": p.stock_actual,
+        "stock_minim": p.stock_minimo,
     } for p in productos]
 
     df = pd.DataFrame(data)
