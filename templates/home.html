@@ -66,16 +66,19 @@
                     <option value="dia">Diario</option>
                 </select>
             </div>
-            <div class="chart-wrapper">
+            <!-- ✅ Altura fija para el gráfico (referencia) -->
+            <div class="chart-wrapper" style="height: 350px; position: relative;">
                 <canvas id="movimientosMesChart"></canvas>
             </div>
         </div>
 
 
-        
-        <div class="chart-container" style="overflow-y:auto; max-height:400px;">
-            <h3>⚠️ Detalle de Alertas</h3>
-            <ul style="padding-left:20px; list-style:none;">
+        <!-- ✅ AJUSTE: Altura fija de 430px para igualar al vecino y Flex para el scroll interno -->
+        <div class="chart-container" style="height: 430px; display: flex; flex-direction: column;">
+            <h3 style="margin-bottom: 10px; flex-shrink: 0;">⚠️ Detalle de Alertas</h3>
+            
+            <!-- La lista ocupa el espacio restante y hace scroll internamente -->
+            <ul style="padding-left:20px; list-style:none; overflow-y: auto; flex-grow: 1; margin-bottom: 0;">
                 {% for p in productos_sin_stock %}
                     <li style="color:#e74c3c; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid #eee;">
                         <strong>🔴 {{ p.nombre_producto }}</strong><br>
@@ -188,11 +191,38 @@
     </div>
 </div>
 
-
+<!-- ========================================== -->
+<!-- MODAL DE LÍMITE ALCANZADO (POP-UP) -->
+<!-- ========================================== -->
+<div class="modal fade" id="limitModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">⚠️ Límite alcanzado</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Solo puedes comparar hasta <strong>10 productos</strong> a la vez.</p>
+        <p class="mb-0 text-muted small">Por favor, desmarca alguno para añadir otro nuevo.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Entendido</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 {% endblock content %}
 
 {% block scripts %}
+<!-- Datos pasados de forma segura a JS -->
+{{ lista_productos_simple|json_script:"lista-productos-data" }}
+
+<!-- Se agrega un bloque de script tipo json para chart_data, ya que es un string JSON -->
+<script id="chart-data-raw" type="application/json">
+{{ chart_data_json|safe }}
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
@@ -208,7 +238,8 @@ function cambiarDashboard(vista) {
 /* ===========================================
    2. DATOS ESTÁTICOS DESDE DJANGO
 ===========================================*/
-const data = JSON.parse(`{{ chart_data_json|escapejs }}`);
+// Se lee el contenido del script tag en lugar de usar template tags directos en JS
+const data = JSON.parse(document.getElementById('chart-data-raw').textContent);
 
 
 /* ===========================================
@@ -268,7 +299,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 /* ===========================================
-   4. GRÁFICOS ESTÁTICOS
+   4. GRÁFICO ESTÁTICOS
 ===========================================*/
 
 /* ===========================================
@@ -471,7 +502,7 @@ document.addEventListener("DOMContentLoaded", function () {
 // LÓGICA DEL COMPARADOR DE PRODUCTOS
 // ===========================================
 
-const listaProductos = {{ lista_productos_simple|default:"[]"|safe }}; 
+const listaProductos = JSON.parse(document.getElementById('lista-productos-data').textContent);
 const MAX_SELECCION = 10;
 let productosChart = null;
 
@@ -511,11 +542,16 @@ function filtrarListaProductos() {
     });
 }
 
+// 🛑 AQUÍ ESTÁ EL CAMBIO CLAVE:
+// Usamos el modal de Bootstrap en lugar de alert()
 function validarYActualizar(checkbox) {
     const seleccionados = document.querySelectorAll(".prod-check:checked");
     
     if (seleccionados.length > MAX_SELECCION) {
-        alert(`⚠️ Límite alcanzado: Solo puedes comparar hasta ${MAX_SELECCION} productos a la vez.`);
+        // MOSTRAR MODAL EN VEZ DE ALERT
+        const limitModal = new bootstrap.Modal(document.getElementById('limitModal'));
+        limitModal.show();
+        
         checkbox.checked = false; 
         return;
     }
