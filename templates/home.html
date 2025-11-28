@@ -59,7 +59,7 @@
     <div class="charts-grid">
         <div class="chart-container" style="grid-column: span 2;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h3 style="margin:0;">Movimientos</h3>
+                <h3 style="margin:0;">Movimientos productos general</h3>
                 <select id="rangoSelector" class="form-select form-select-sm" style="width:auto;">
                     <option value="mes" selected>Mensual</option>
                     <option value="semana">Semanal</option>
@@ -70,6 +70,8 @@
                 <canvas id="movimientosMesChart"></canvas>
             </div>
         </div>
+
+
         
         <div class="chart-container" style="overflow-y:auto; max-height:400px;">
             <h3>⚠️ Detalle de Alertas</h3>
@@ -92,7 +94,47 @@
             </ul>
         </div>
     </div>
+
+<div class="card mt-4 mb-5 shadow-sm" style="border:none; border-radius:10px; overflow:hidden;">
+    <div class="card-header bg-white p-4 border-bottom">
+        <h3 class="m-0" style="color:#2c3e50;"> Comparador de Productos</h3>
+        <p class="text-muted m-0 small">Selecciona hasta 10 productos para comparar sus movimientos en el periodo de fechas seleccionado.</p>
+    </div>
+
+    <div class="card-body p-0">
+        <div class="row g-0">
+            
+            <div class="col-md-9 p-4">
+                <div class="chart-wrapper" style="height: 400px; position: relative;">
+                    <canvas id="productosEspecificosChart"></canvas>
+                    <div id="chartPlaceholder" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#999; text-align:center;">
+                        <span style="font-size: 2rem;"></span><br>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3 bg-light border-start p-3" style="height: 450px; overflow: hidden; display: flex; flex-direction: column;">
+                
+                <h6 class="fw-bold text-uppercase text-muted mb-3" style="font-size: 0.75rem; letter-spacing: 1px;">
+                    Selección (Máx 10)
+                </h6>
+                
+                <input type="text" id="filtroProdInput" class="form-control form-control-sm mb-3" placeholder="🔍 Buscar producto..." onkeyup="filtrarListaProductos()">
+                
+                <div id="listaProductosCheck" style="overflow-y: auto; flex-grow: 1; padding-right: 5px;">
+                    <div class="text-center text-muted small mt-5">Cargando productos...</div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
 </div>
+</div>
+    
+</div>
+
+
 
 
 <div id="dash-categoria" class="dashboard-section" style="display:none;">
@@ -400,10 +442,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (!inputDesde || !inputHasta) return;
 
-    // Fecha actual
     const hoy = new Date().toISOString().split("T")[0];
 
-    // Limitar "hasta" a hoy
     inputHasta.max = hoy;
 
     function validarFechas() {
@@ -427,6 +467,121 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 
+// ===========================================
+// LÓGICA DEL COMPARADOR DE PRODUCTOS
+// ===========================================
 
+const listaProductos = {{ lista_productos_simple|default:"[]"|safe }}; 
+const MAX_SELECCION = 10;
+let productosChart = null;
+
+document.addEventListener("DOMContentLoaded", () => {
+    renderizarChecklist();
+});
+
+function renderizarChecklist() {
+    const container = document.getElementById("listaProductosCheck");
+    if(!container) return;
+
+    if(listaProductos.length === 0) {
+        container.innerHTML = "<p class='text-muted text-center'>No hay productos</p>";
+        return;
+    }
+
+    let html = "";
+    listaProductos.forEach(p => {
+        html += `
+            <div class="form-check product-item">
+                <input class="form-check-input prod-check" type="checkbox" value="${p.id}" id="chk_${p.id}" onchange="validarYActualizar(this)">
+                <label class="form-check-label text-truncate w-100" for="chk_${p.id}" title="${p.nombre_producto}" style="cursor:pointer;">
+                    ${p.nombre_producto}
+                </label>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+function filtrarListaProductos() {
+    const texto = document.getElementById("filtroProdInput").value.toLowerCase();
+    const items = document.querySelectorAll(".product-item");
+    items.forEach(div => {
+        const label = div.innerText.toLowerCase();
+        div.style.display = label.includes(texto) ? "block" : "none";
+    });
+}
+
+function validarYActualizar(checkbox) {
+    const seleccionados = document.querySelectorAll(".prod-check:checked");
+    
+    if (seleccionados.length > MAX_SELECCION) {
+        alert(`⚠️ Límite alcanzado: Solo puedes comparar hasta ${MAX_SELECCION} productos a la vez.`);
+        checkbox.checked = false; 
+        return;
+    }
+    actualizarGraficoProductos();
+}
+
+function actualizarGraficoProductos() {
+    const checkboxes = document.querySelectorAll(".prod-check:checked");
+    const ids = Array.from(checkboxes).map(cb => cb.value).join(",");
+
+    const ctx = document.getElementById('productosEspecificosChart').getContext('2d');
+
+    if (!ids) {
+        if(productosChart) {
+            productosChart.data.labels = [];
+            productosChart.data.datasets.forEach((dataset) => { dataset.data = []; });
+            productosChart.update();
+        }
+        return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const fInicio = params.get('fecha_inicio') || '';
+    const fFin = params.get('fecha_fin') || '';
+    const rango = document.getElementById('rangoSelector') ? document.getElementById('rangoSelector').value : 'mes';
+
+    fetch(`/api/chart-productos/?ids=${ids}&rango=${rango}&fecha_inicio=${fInicio}&fecha_fin=${fFin}`)
+        .then(res => res.json())
+        .then(data => {
+            
+            if (productosChart) productosChart.destroy();
+
+            productosChart = new Chart(ctx, {
+                type: 'bar', 
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        { 
+                            label: 'Entradas (Seleccionados)', 
+                            data: data.entradas, 
+                            backgroundColor: '#2ecc71', 
+                            borderColor: '#27ae60',
+                            borderWidth: 1 
+                        },
+                        { 
+                            label: 'Salidas (Seleccionados)', 
+                            data: data.salidas, 
+                            backgroundColor: '#e74c3c', 
+                            borderColor: '#c0392b',
+                            borderWidth: 1 
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { 
+                        y: { beginAtZero: true, title: {display: true, text: 'Cantidad'} } 
+                    },
+                    plugins: {
+                        tooltip: { mode: 'index', intersect: false }
+                    }
+                }
+            });
+        })
+        .catch(err => console.error("Error cargando productos:", err));
+}
 </script>
 {% endblock %}

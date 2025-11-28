@@ -79,36 +79,47 @@
   box-shadow: var(--sombra-ligera);
 }
 
+
 .filtro-fechas {
     display: flex;
     gap: 15px;
-    align-items: flex-end; 
+    align-items: flex-end;
     background: #ffffffdd;
     padding: 12px 15px;
     border-radius: 8px;
     margin-bottom: 20px;
     border: 1px solid #e5e7eb;
-    flex-wrap: wrap; 
+    flex-wrap: wrap;
 }
-
 .filtro-fechas label {
     font-size: 0.8rem;
     font-weight: 600;
     margin-bottom: 3px;
     display: block;
 }
-
-.filtro-fechas input[type="date"], 
-.filtro-fechas select {
+.filtro-fechas input[type="date"] {
     padding: 6px 10px;
     border-radius: 6px;
     border: 1px solid #ccc;
     min-width: 130px;
-    width: auto !important; 
-    display: inline-block;
-    max-width: 200px;       
+}
+.filtro-fechas .btn {
+    height: 38px;
 }
 
-.filtro-fechas .btn {
-    height: 38px; 
+.dropdown-menu {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border: 1px solid #eee;
+}
+.form-check.product-item {
+    padding: 8px 12px;
+    border-bottom: 1px solid #f8f9fa;
+}
+.form-check.product-item:hover {
+    background-color: #f1f5f9;
+}
+.form-check-label {
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #333;
 }

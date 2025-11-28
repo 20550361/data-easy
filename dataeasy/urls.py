@@ -39,6 +39,7 @@ urlpatterns = [
     path('estadisticas/', views.estadisticas, name='estadisticas'),
     path('carga_datos/', views.carga_datos, name='carga_datos'),
     path('api/chart-data/', views.chart_data_api, name='chart_data_api'),
+    path('api/chart-productos/', views.chart_productos_api, name='chart_productos_api'),
 
     # --- FACTURACIÓN ---
     path('facturacion/', views.facturacion, name='facturacion'),

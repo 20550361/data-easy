@@ -2,6 +2,19 @@
 {% load static %}
 
 {% block title %}{{ titulo }} - DataEasy{% endblock %}
+{% block styles %}
+  <style>
+    .form-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
+    .card { background:#fff; border-radius:10px; padding:16px; box-shadow: 0 4px 12px rgba(0,0,0,.05); }
+    .field { margin:10px 0; display:flex; flex-direction:column; gap:6px; }
+    input[type="text"], input[type="email"], input[type="password"] {
+      padding:10px; border:1px solid #ddd; border-radius:8px;
+    }
+    .btn-primary { background:#2C3E50; color:#fff; padding:10px 16px; border:none; border-radius:8px; cursor:pointer; }
+    .btn-secondary { padding:10px 16px; border:1px solid #ccc; border-radius:8px; margin-left:8px; text-decoration:none; }
+    .errorlist { color:#b00020; margin-top:10px; }
+  </style>
+{% endblock %}
 
 {% block content %}
   <h2>👥 {{ titulo }}</h2>
@@ -71,15 +84,5 @@
     </div>
   </form>
 
-  <style>
-    .form-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
-    .card { background:#fff; border-radius:10px; padding:16px; box-shadow: 0 4px 12px rgba(0,0,0,.05); }
-    .field { margin:10px 0; display:flex; flex-direction:column; gap:6px; }
-    input[type="text"], input[type="email"], input[type="password"] {
-      padding:10px; border:1px solid #ddd; border-radius:8px;
-    }
-    .btn-primary { background:#2C3E50; color:#fff; padding:10px 16px; border:none; border-radius:8px; cursor:pointer; }
-    .btn-secondary { padding:10px 16px; border:1px solid #ccc; border-radius:8px; margin-left:8px; text-decoration:none; }
-    .errorlist { color:#b00020; margin-top:10px; }
-  </style>
+
 {% endblock %}

@@ -295,6 +295,7 @@ def eliminar_usuario(request, pk):
 # 6. ESTADÍSTICAS
 # ============================================================
 def _build_estadisticas_context(request):
+    # 1. Filtros de Fecha
     fecha_inicio = request.GET.get("fecha_inicio")
     fecha_fin = request.GET.get("fecha_fin")
     hoy = timezone.now().date()
@@ -302,25 +303,28 @@ def _build_estadisticas_context(request):
     if fecha_inicio:
         fecha_inicio = datetime.strptime(fecha_inicio, "%Y-%m-%d").date()
     else:
-        fecha_inicio = hoy - timedelta(days=180) 
+        fecha_inicio = hoy - timedelta(days=180)
 
     if fecha_fin:
         fecha_fin = datetime.strptime(fecha_fin, "%Y-%m-%d").date()
     else:
         fecha_fin = hoy
 
+    # 2. Query de Movimientos (para gráfico de línea estático si se usa)
     movimientos = MovimientoInventario.objects.filter(
         fecha_movimiento__date__range=[fecha_inicio, fecha_fin]
     )
 
+    # 3. Lógica de Productos Críticos (Stock 0 o menor al mínimo)
     productos_criticos_total = Producto.objects.filter(
         stock_actual__lte=F("stock_minimo")
     ).select_related('categoria', 'marca')
 
-
+    # Listas separadas solo para mostrar contadores en las tarjetas
     productos_sin = productos_criticos_total.filter(stock_actual=0)
     productos_bajo = productos_criticos_total.filter(stock_actual__gt=0)
 
+    # --- PROCESAMIENTO: CRÍTICO POR CATEGORÍA ---
     critico_cat_map = {}
     critico_cat_nombres = {}
 
@@ -335,7 +339,7 @@ def _build_estadisticas_context(request):
         estado = "(0)" if p.stock_actual == 0 else f"({p.stock_actual}/{p.stock_minimo})"
         critico_cat_nombres[cat_name].append(f"{p.nombre_producto} {estado}")
 
-
+    # --- PROCESAMIENTO: CRÍTICO POR MARCA ---
     critico_marca_map = {}
     critico_marca_nombres = {}
 
@@ -350,7 +354,7 @@ def _build_estadisticas_context(request):
         estado = "(0)" if p.stock_actual == 0 else f"({p.stock_actual}/{p.stock_minimo})"
         critico_marca_nombres[marca_name].append(f"{p.nombre_producto} {estado}")
 
-
+    # Helper para limitar tooltips
     def preparar_tooltip(lista_nombres):
         resultado = []
         for nombres in lista_nombres:
@@ -360,46 +364,8 @@ def _build_estadisticas_context(request):
             resultado.append(recorte)
         return resultado
 
-
-    movimientos_por_mes = (
-        movimientos.annotate(mes=TruncMonth("fecha_movimiento"))
-        .values("mes", "tipo_movimiento")
-        .annotate(total=Sum("cantidad"))
-        .order_by("mes")
-    )
-
-    meses = []
-    entradas = []
-    salidas = []
-    
-
-    curr = fecha_inicio.replace(day=1)
-    while curr <= fecha_fin:
-        key = curr.strftime("%Y-%m")
-        meses.append(key)
-        entradas.append(0)
-        salidas.append(0)
-
-        next_month = curr.replace(day=28) + timedelta(days=4)
-        curr = next_month.replace(day=1)
-
-
-    for row in movimientos_por_mes:
-        if row["mes"]:
-            m = row["mes"].strftime("%Y-%m")
-            if m in meses:
-                idx = meses.index(m)
-                if row["tipo_movimiento"] == "entrada":
-                    entradas[idx] = row["total"]
-                else:
-                    salidas[idx] = row["total"]
-
-
+    # 4. Construcción del JSON Final
     chart_data = {
-        "meses": meses,
-        "entradas": entradas,
-        "salidas": salidas,
-        
         # --- GRAFICOS DE PASTEL (DISTRIBUCIÓN) ---
         "stock_por_categoria_labels": [
             c["categoria__nombre_categoria"] or "Sin categoría"
@@ -428,23 +394,99 @@ def _build_estadisticas_context(request):
         "stock_critico_marca_tooltips": preparar_tooltip(list(critico_marca_nombres.values())),
     }
 
-
+    # 5. Retorno del Contexto
     return {
         "fecha_inicio": fecha_inicio,
         "fecha_fin": fecha_fin,
-        
-
         "productos_bajo_stock": productos_bajo,
         "productos_sin_stock": productos_sin,
-        
         "total_categorias": Categoria.objects.count(),
         "total_marcas": Marca.objects.count(),
         "total_productos": Producto.objects.count(),
         "stock_total": Producto.objects.aggregate(t=Sum("stock_actual"))["t"] or 0,
-        
         "chart_data_json": json.dumps(chart_data, cls=DjangoJSONEncoder),
+        
+        # 👇 ESTA ES LA LÍNEA NUEVA CLAVE PARA EL CHECKLIST 👇
+        "lista_productos_simple": list(Producto.objects.values('id', 'nombre_producto').order_by('nombre_producto')),
     }
 
+# ============================================================
+# API NUEVA: GRÁFICO COMPARATIVO (EJE X = PRODUCTOS)
+# ============================================================
+@login_required
+def chart_productos_api(request):
+    """
+    Devuelve el total de Entradas vs Salidas por PRODUCTO (no por tiempo),
+    filtrado por el rango de fechas global.
+    """
+    ids_str = request.GET.get('ids', '')
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
+
+    # 1. Validar IDs
+    if not ids_str:
+        return JsonResponse({"labels": [], "entradas": [], "salidas": []})
+
+    try:
+        id_list = [int(x) for x in ids_str.split(',') if x.strip().isdigit()]
+    except ValueError:
+        return JsonResponse({"labels": [], "entradas": [], "salidas": []})
+
+    # 2. Configurar Fechas
+    hoy = timezone.now().date()
+    if not fecha_inicio:
+        fecha_inicio = hoy - timedelta(days=180)
+    else:
+        try:
+            fecha_inicio = datetime.strptime(fecha_inicio, "%Y-%m-%d").date()
+        except ValueError:
+            fecha_inicio = hoy - timedelta(days=180)
+        
+    if not fecha_fin:
+        fecha_fin = hoy
+    else:
+        try:
+            fecha_fin = datetime.strptime(fecha_fin, "%Y-%m-%d").date()
+        except ValueError:
+            fecha_fin = hoy
+
+    # 3. CONSULTA AGRUPADA POR PRODUCTO
+    # Filtramos por fecha y productos, pero agrupamos por NOMBRE del producto
+    qs = MovimientoInventario.objects.filter(
+        fecha_movimiento__date__range=[fecha_inicio, fecha_fin],
+        producto_id__in=id_list
+    ).values(
+        'producto__nombre_producto', 'tipo_movimiento'
+    ).annotate(
+        total=Sum('cantidad')
+    ).order_by('producto__nombre_producto')
+
+    # 4. Procesar Datos
+    data_map = {}
+    
+    # Pre-llenamos el mapa con los productos seleccionados para que aparezcan aunque tengan 0 movimientos
+    # (Opcional: Si prefieres solo mostrar los que tienen movs, comenta este bloque for)
+    # for prod_id in id_list:
+    #    nombre = Producto.objects.get(id=prod_id).nombre_producto
+    #    data_map[nombre] = {'entradas': 0, 'salidas': 0}
+
+    for row in qs:
+        nombre = row['producto__nombre_producto']
+        if nombre not in data_map:
+            data_map[nombre] = {'entradas': 0, 'salidas': 0}
+        
+        if row['tipo_movimiento'] == 'entrada':
+            data_map[nombre]['entradas'] += row['total']
+        else:
+            data_map[nombre]['salidas'] += row['total']
+
+    # Separar en listas
+    labels = list(data_map.keys())
+    return JsonResponse({
+        "labels": labels, # Nombres de productos
+        "entradas": [data_map[k]['entradas'] for k in labels],
+        "salidas": [data_map[k]['salidas'] for k in labels]
+    })
 
 @login_required(login_url="index")
 def estadisticas(request):
@@ -478,7 +520,10 @@ def chart_data_api(request):
         trunc_func = TruncMonth('fecha_movimiento')
         fmt = '%Y-%m'
 
-    qs = MovimientoInventario.objects.all().annotate(
+
+    qs = MovimientoInventario.objects.filter(
+        fecha_movimiento__date__range=[fecha_inicio, fecha_fin]
+    ).annotate(
         periodo=trunc_func
     ).values(
         'periodo', 'tipo_movimiento'
@@ -509,124 +554,89 @@ def chart_data_api(request):
 # ============================================================
 # 7. CARGA MASIVA DE PRODUCTOS
 # ============================================================
-@login_required(login_url="index")
+@login_required
 def carga_datos(request):
-
     if request.method == "POST":
         if not request.FILES.get("archivo_excel"):
             return JsonResponse({"status": "error", "message": "No seleccionaste ningún archivo."})
 
         try:
             archivo = request.FILES["archivo_excel"]
-            
-
             df = pd.read_excel(archivo)
 
 
             def limpiar(txt):
-                                return (
-                    str(txt)
-                    .strip()
-                    .lower()
-                    .replace(" ", "_")
-                    .replace("á", "a")
-                    .replace("é", "e")
-                    .replace("í", "i")
-                    .replace("ó", "o")
-                    .replace("ú", "u")
-                )
-
+                return str(txt).strip().lower().replace(" ", "_").replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u")
 
             df.columns = [limpiar(c) for c in df.columns]
 
- 
             cols_ok = ["nombre_producto", "categoria", "marca", "stock_actual"]
             faltan = [c for c in cols_ok if c not in df.columns]
 
             if faltan:
-                                return JsonResponse({
-                    "status": "error",
-                    "message": f"Faltan columnas en el Excel: {', '.join(faltan)}"
-                })
-           
+                return JsonResponse({"status": "error", "message": f"Faltan columnas: {', '.join(faltan)}"})
+
             count = 0
             nuevos = 0
+            
             for _, row in df.iterrows():
-                if pd.isna(row.get("nombre_producto")): continue
+                nombre = row.get("nombre_producto")
+                if pd.isna(nombre): continue
                 
-
+                cat_nombre = str(row.get("categoria", "")).strip()
+                marca_nombre = str(row.get("marca", "")).strip()
+                
                 cat_obj = None
-                if pd.notna(row.get("categoria")):
-                    cat_obj, _ = Categoria.objects.get_or_create(nombre_categoria=str(row["categoria"]).strip())
+                if cat_nombre and cat_nombre.lower() != "nan":
+                    cat_obj, _ = Categoria.objects.get_or_create(nombre_categoria=cat_nombre)
                 
                 marca_obj = None
-                if pd.notna(row.get("marca")):
-                    marca_obj, _ = Marca.objects.get_or_create(nombre_marca=str(row["marca"]).strip())
+                if marca_nombre and marca_nombre.lower() != "nan":
+                    marca_obj, _ = Marca.objects.get_or_create(nombre_marca=marca_nombre)
 
-                                # =====================================================
-                # VALIDACIÓN NUMÉRICA PARA stock_actual Y stock_minimo
-                # =====================================================
+                stock_nuevo = int(row.get("stock_actual", 0))
+                stock_minimo = int(row.get("stock_minimo", 5))
+                descripcion = row.get("descripcion", "")
 
-                # Validar stock_actual
-                try:
-                    stock_actual_val = int(row.get("stock_actual", 0))
-                except:
-                    return JsonResponse({
-                        "status": "error",
-                        "message": f"❌ El valor de stock_actual debe ser numérico. Revisa el producto: {row.get('nombre_producto')}"
-                    })
-
-                if stock_actual_val < 0:
-                    return JsonResponse({
-                        "status": "error",
-                        "message": f"❌ No se permiten números negativos en stock_actual. Producto: {row.get('nombre_producto')}"
-                    })
-
-                # Validar stock_minimo
-                try:
-                    stock_minimo_val = int(row.get("stock_minimo", 5))
-                except:
-                    return JsonResponse({
-                        "status": "error",
-                        "message": f"❌ El valor de stock_minimo debe ser numérico. Revisa el producto: {row.get('nombre_producto')}"
-                    })
-
-                if stock_minimo_val < 0:
-                    return JsonResponse({
-                        "status": "error",
-                        "message": f"❌ No se permiten números negativos en stock_minimo. Producto: {row.get('nombre_producto')}"
-                    })
-
-                # =====================================================
-                # GUARDADO FINAL
-                # =====================================================
+                producto_existente = Producto.objects.filter(nombre_producto=nombre).first()
+                stock_anterior = producto_existente.stock_actual if producto_existente else 0
                 
-                _, created = Producto.objects.update_or_create(
-                    nombre_producto=row["nombre_producto"],
+                diferencia = stock_nuevo - stock_anterior
+
+
+                producto, created = Producto.objects.update_or_create(
+                    nombre_producto=nombre,
                     defaults={
                         "categoria": cat_obj,
                         "marca": marca_obj,
-                        "stock_actual": stock_actual_val,
-                        "stock_minimo": stock_minimo_val,
-                        "descripcion": row.get("descripcion", "")
+                        "stock_actual": stock_nuevo,
+                        "stock_minimo": stock_minimo,
+                        "descripcion": descripcion
                     }
                 )
+
+                if diferencia != 0:
+                    tipo = 'entrada' if diferencia > 0 else 'salida'
+                    
+                    MovimientoInventario.objects.create(
+                        producto=producto,
+                        tipo_movimiento=tipo,
+                        cantidad=abs(diferencia),
+                        fecha_movimiento=timezone.now() 
+                    )
+
                 count += 1
                 if created: nuevos += 1
             
-            
             return JsonResponse({
                 "status": "success", 
-                "message": f"¡Proceso finalizado! {count} productos procesados ({nuevos} nuevos)."
+                "message": f"¡Listo! {count} productos procesados. Se generó el historial de movimientos."
             })
 
         except Exception as e:
-           
             return JsonResponse({"status": "error", "message": f"Error interno: {str(e)}"})
 
-    # Si entran por URL directa, mostramos el HTML normal
     return render(request, "carga_datos.html")
-
 
 # ============================================================
 # 8. EXPORTAR EXCEL
@@ -751,3 +761,79 @@ def factura_pdf(request, id):
     response["Content-Disposition"] = f'attachment; filename="factura_{factura.id}.pdf"'
     return response
 
+
+# ============================================================
+# API NUEVA: GRÁFICO COMPARATIVO POR PRODUCTOS ESPECÍFICOS
+# ============================================================
+@login_required
+def chart_productos_api(request):
+    """
+    Devuelve el total de Entradas vs Salidas por PRODUCTO (no por tiempo),
+    filtrado por el rango de fechas global.
+    """
+    ids_str = request.GET.get('ids', '')
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
+
+    # 1. Validar IDs
+    if not ids_str:
+        return JsonResponse({"labels": [], "entradas": [], "salidas": []})
+
+    try:
+        id_list = [int(x) for x in ids_str.split(',') if x.strip().isdigit()]
+    except ValueError:
+        return JsonResponse({"labels": [], "entradas": [], "salidas": []})
+
+    # 2. Configurar Fechas
+    hoy = timezone.now().date()
+    if not fecha_inicio:
+        fecha_inicio = hoy - timedelta(days=180)
+    else:
+        try:
+            fecha_inicio = datetime.strptime(fecha_inicio, "%Y-%m-%d").date()
+        except ValueError:
+            fecha_inicio = hoy - timedelta(days=180)
+        
+    if not fecha_fin:
+        fecha_fin = hoy
+    else:
+        try:
+            fecha_fin = datetime.strptime(fecha_fin, "%Y-%m-%d").date()
+        except ValueError:
+            fecha_fin = hoy
+
+    # 3. CONSULTA AGRUPADA POR PRODUCTO
+    # Filtramos por fecha y productos, pero agrupamos por NOMBRE del producto
+    qs = MovimientoInventario.objects.filter(
+        fecha_movimiento__date__range=[fecha_inicio, fecha_fin],
+        producto_id__in=id_list
+    ).values(
+        'producto__nombre_producto', 'tipo_movimiento'
+    ).annotate(
+        total=Sum('cantidad')
+    ).order_by('producto__nombre_producto')
+
+    # 4. Procesar Datos
+    data_map = {}
+    
+    # (Opcional) Si quisieras mostrar productos con 0 movimientos,
+    # podrías iterar id_list aquí para inicializar data_map.
+    # Por ahora solo mostramos los que tienen actividad en el rango.
+
+    for row in qs:
+        nombre = row['producto__nombre_producto']
+        if nombre not in data_map:
+            data_map[nombre] = {'entradas': 0, 'salidas': 0}
+        
+        if row['tipo_movimiento'] == 'entrada':
+            data_map[nombre]['entradas'] += row['total']
+        else:
+            data_map[nombre]['salidas'] += row['total']
+
+    # Separar en listas para Chart.js
+    labels = list(data_map.keys())
+    return JsonResponse({
+        "labels": labels, # Nombres de productos
+        "entradas": [data_map[k]['entradas'] for k in labels],
+        "salidas": [data_map[k]['salidas'] for k in labels]
+    })
