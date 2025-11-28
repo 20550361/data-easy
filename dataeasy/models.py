@@ -3,6 +3,7 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.db.models import Sum
 from django.contrib.auth.models import User  # <-- NUEVO
+from django.core.files.base import ContentFile
 
 # --- Modelo 1: Categoria ---
 class Categoria(models.Model):
@@ -84,17 +85,38 @@ class SeguridadUsuario(models.Model):
         norm = lambda s: (s or "").strip().casefold()
         return norm(r1) == norm(self.respuesta1) and norm(r2) == norm(self.respuesta2)
     
+# ============================
+# MODELOS DE FACTURACIÓN
+# ============================
 class Factura(models.Model):
+    cliente_nombre = models.CharField(max_length=100)
+    cliente_apellido = models.CharField(max_length=100)
+    cliente_rut = models.CharField(max_length=15)
     fecha = models.DateTimeField(auto_now_add=True)
-    total = models.DecimalField(max_digits=12, decimal_places=2)
+
+    # Nuevo: total de la factura
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    # Nuevo: archivo PDF generado
+    archivo_pdf = models.FileField(upload_to="facturas_pdfs/", null=True, blank=True)
 
     def __str__(self):
-        return f"Factura #{self.id}"
+        return f"Factura #{self.id} - {self.cliente_nombre} {self.cliente_apellido}"
 
 
 class DetalleFactura(models.Model):
     factura = models.ForeignKey(Factura, related_name="detalles", on_delete=models.CASCADE)
-    producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
+    producto = models.ForeignKey("Producto", on_delete=models.CASCADE)
+
     cantidad = models.PositiveIntegerField()
-    precio = models.DecimalField(max_digits=12, decimal_places=2)
-    subtotal = models.DecimalField(max_digits=12, decimal_places=2)
+
+    # No usamos precios por ahora, pero se dejan
+    precio = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    # Nuevos datos informativos:
+    categoria = models.CharField(max_length=255, null=True, blank=True)
+    marca = models.CharField(max_length=255, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.producto.nombre_producto} (x{self.cantidad})"

@@ -67,18 +67,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'miweb.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3', # Tu base de datos en la raíz
-    }
-}
-
-
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
@@ -131,7 +119,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'dataeasy',
         'USER': 'root',
-        'PASSWORD': '123456',
+        'PASSWORD': '1234567890',
         'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
