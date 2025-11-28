@@ -2,8 +2,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}DataEasy{% endblock %}</title>
 
     <!-- Bootstrap CSS -->
@@ -12,20 +12,23 @@
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     {% block styles %}{% endblock %}
 </head>
+
 <body>
 
+<!-- ======================================================== -->
+<!--  TOPBAR -->
+<!-- ======================================================== -->
 <header class="topbar">
-    <a href="{% url 'home' %}" class="logo-link"><h1 class="logo">DataEasy</h1></a>
+    <a href="{% url 'home' %}" class="logo-link">
+        <h1 class="logo">DataEasy</h1>
+    </a>
 
     <div class="user-menu-wrapper">
         <img src="{% static 'img/user.png' %}" class="user-icon" id="userIcon">
 
-        <!-- MENU DESPLEGABLE -->
         <div class="dropdown-menu" id="dropdownMenu">
-            <!-- Mi ficha eliminado -->
             <a href="#" id="logoutLink">🔒 Cerrar sesión</a>
 
-            <!-- FORMULARIO LOGOUT -->
             <form id="logoutForm" action="{% url 'logout' %}" method="post" style="display:none;">
                 {% csrf_token %}
             </form>
@@ -33,8 +36,14 @@
     </div>
 </header>
 
+
+<!-- ======================================================== -->
+<!--  SIDEBAR -->
+<!-- ======================================================== -->
 <aside class="sidebar">
+
     <div class="sidebar-content-top">
+        <!-- Profile Section -->
         <div class="profile-section">
             <div class="profile-pic-container" data-bs-toggle="modal" data-bs-target="#modalPerfil" style="cursor:pointer;">
                 <img src="{% static 'img/user.png' %}" class="profile-pic">
@@ -42,12 +51,13 @@
             <h3>{{ user.username }}</h3>
         </div>
 
+        <!-- Sidebar Navigation -->
         <nav class="sidebar-nav">
             <a href="{% url 'home' %}" class="sidebar-btn">🏠 Home</a>
-             <a href="{% url 'inventario_lista' %}" class="sidebar-btn">📦 Inventario</a>
-             <a href="{% url 'lista_usuarios' %}" class="sidebar-btn">👥 Gestión de usuarios</a>
-             <a href="{% url 'facturacion' %}" class="sidebar-btn">🧾 Movimiento</a>
-             <a href="#" class="sidebar-btn" data-bs-toggle="modal" data-bs-target="#modalCargaDatos">📁 Carga Excel</a>
+            <a href="{% url 'inventario_lista' %}" class="sidebar-btn">📦 Inventario</a>
+            <a href="{% url 'lista_usuarios' %}" class="sidebar-btn">👥 Gestión de usuarios</a>
+            <a href="{% url 'facturacion' %}" class="sidebar-btn">🧾 Movimiento</a>
+            <a href="#" class="sidebar-btn" data-bs-toggle="modal" data-bs-target="#modalCargaDatos">📁 Carga Excel</a>
         </nav>
     </div>
 
@@ -58,38 +68,41 @@
             {% for p in sidebar_alertas %}
             <li class="alert-item">
                 {% if p.stock_actual == 0 %}
-                    <span style="color: #e74c3c;">🔴</span> 
+                    <span style="color:#e74c3c;">🔴</span>
                 {% else %}
-                    <span style="color: #f1c40f;">🟡</span> 
+                    <span style="color:#f1c40f;">🟡</span>
                 {% endif %}
                 <a href="{% url 'inventario_lista' %}?q={{ p.nombre_producto }}">
-                    {{ p.nombre_producto }}
-                    <span class="stock-num">({{ p.stock_actual }})</span>
+                    {{ p.nombre_producto }} <span class="stock-num">({{ p.stock_actual }})</span>
                 </a>
             </li>
             {% endfor %}
         </ul>
     </div>
     {% endif %}
-
 </aside>
-    <main class="content-area">
-        {% if messages %}
-        <div class="container mt-2">
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        {% block content %}{% endblock %}
-    </main>
-
-</div>
 
 
 <!-- ======================================================== -->
-<!--  MODAL DE CARGA MASIVA -->
+<!--  MAIN CONTENT -->
+<!-- ======================================================== -->
+<main class="content-area">
+
+    {% if messages %}
+    <div class="container mt-2">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+
+</main>
+
+
+<!-- ======================================================== -->
+<!--  MODAL DE CARGA MASIVA (EXCEL) -->
 <!-- ======================================================== -->
 <div class="modal fade" id="modalCargaDatos" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -106,13 +119,19 @@
             {% csrf_token %}
             
             <label class="form-label text-muted">
-                Columnas requeridas: <strong>nombre_producto, categoria, marca, stock_actual</strong>
+                Columnas requeridas:
+                <strong>nombre_producto, categoria, marca, stock_actual</strong>
             </label>
 
-            <input type="file" class="form-control mb-3" name="archivo_excel" id="archivo_excel_input" accept=".xlsx,.xls" required>
+            <input type="file" class="form-control mb-3"
+                   name="archivo_excel"
+                   id="archivo_excel_input"
+                   accept=".xlsx,.xls" required>
 
             <div id="uploadProgress" class="progress mb-3" style="display:none;">
-                <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%">Procesando...</div>
+                <div class="progress-bar progress-bar-striped progress-bar-animated" style="width:100%">
+                    Procesando...
+                </div>
             </div>
 
             <div id="uploadFeedback" style="display:none;" class="alert"></div>
@@ -127,70 +146,9 @@
   </div>
 </div>
 
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    const form = document.getElementById("formExcelAjax");
-    const feedback = document.getElementById("uploadFeedback");
-    const progress = document.getElementById("uploadProgress");
-    const btn = document.getElementById("btnSubirExcel");
-
-    if(form){
-        form.addEventListener("submit", function(e) {
-            e.preventDefault();
-
-           
-            feedback.style.display = "none";
-            feedback.className = "alert"; 
-            progress.style.display = "block"; 
-            btn.disabled = true; 
-
-            
-            const formData = new FormData(form);
-
-           
-            fetch("{% url 'carga_datos' %}", {
-                method: "POST",
-                body: formData,
-                headers: {
-                    "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                progress.style.display = "none";
-                btn.disabled = false;
-                feedback.style.display = "block";
-
-                if (data.status === "success") {
-                    // ÉXITO: Verde
-                    feedback.classList.add("alert-success");
-                    feedback.innerHTML = `✅ <strong>¡Listo!</strong> ${data.message}`;
-                    
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 2000);
-                } else {
-                    // ERROR: Rojo
-                    feedback.classList.add("alert-danger");
-                    feedback.innerHTML = `❌ <strong>Error:</strong> ${data.message}`;
-                }
-            })
-            .catch(error => {
-                progress.style.display = "none";
-                btn.disabled = false;
-                feedback.style.display = "block";
-                feedback.classList.add("alert-danger");
-                feedback.innerHTML = "❌ Error de conexión con el servidor.";
-                console.error("Error:", error);
-            });
-        });
-    }
-});
-</script>
-
 
 <!-- ======================================================== -->
-<!--  MODAL DE PERFIL (ANTES MI FICHA) -->
+<!--  MODAL PERFIL -->
 <!-- ======================================================== -->
 <div class="modal fade" id="modalPerfil" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -202,9 +160,7 @@ document.addEventListener("DOMContentLoaded", function() {
       </div>
 
       <div class="modal-body">
-
         {% include 'perfil.html' %}
-
       </div>
 
     </div>
@@ -212,67 +168,148 @@ document.addEventListener("DOMContentLoaded", function() {
 </div>
 
 
+<!-- ======================================================== -->
+<!--  SCRIPTS GLOBALES -->
+<!-- ======================================================== -->
 
-<!-- BOOTSTRAP JS -->
+<!-- XLSX para leer Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 
 <!-- ======================================================== -->
-<!-- 🔥 SCRIPT: Barra de progreso -->
+<!-- VALIDACIÓN DEFINITIVA: NO PERMITIR STOCK NEGATIVO -->
 <!-- ======================================================== -->
 <script>
-document.getElementById("formExcel").addEventListener("submit", function() {
-    document.getElementById("progressContainer").style.display = "block";
-    let bar = document.getElementById("progressBar");
-    let width = 0;
+document.addEventListener("DOMContentLoaded", function() {
+    const form = document.getElementById("formExcelAjax");
+    const feedback = document.getElementById("uploadFeedback");
+    const progress = document.getElementById("uploadProgress");
+    const btn = document.getElementById("btnSubirExcel");
+    const fileInput = document.getElementById("archivo_excel_input");
 
-    let interval = setInterval(() => {
-        if (width >= 100) clearInterval(interval);
-        else {
-            width += 5;
-            bar.style.width = width + "%";
-        }
-    }, 80);
+    if(form){
+        form.addEventListener("submit", async function(e) {
+            e.preventDefault();
+
+            const archivo = fileInput.files[0];
+            if (!archivo) return;
+
+            const buffer = await archivo.arrayBuffer();
+            const workbook = XLSX.read(buffer, { type: "array" });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const datos = XLSX.utils.sheet_to_json(sheet, { defval:"" });
+
+            if (datos.length === 0) {
+                feedback.style.display = "block";
+                feedback.className = "alert alert-danger";
+                feedback.innerHTML = "❌ El archivo está vacío.";
+                return;
+            }
+
+            // *Detectar automáticamente columna stock_actual*
+            const columnasLimpias = Object.keys(datos[0]).map(c =>
+                c.trim().toLowerCase().replace(/[^a-z0-9]/g, "")
+            );
+
+            let idx = columnasLimpias.findIndex(c =>
+                c.includes("stockactual") || (c.includes("stock") && c.includes("actual"))
+            );
+
+            if (idx === -1) {
+                feedback.style.display = "block";
+                feedback.className = "alert alert-danger";
+                feedback.innerHTML =
+                    "❌ No se encontró la columna <strong>stock_actual</strong> en el Excel.";
+                return;
+            }
+
+            const columnaReal = Object.keys(datos[0])[idx];
+
+            // Validación: NO PERMITIR negativos
+            for (let i = 0; i < datos.length; i++) {
+                let valor = Number(datos[i][columnaReal]);
+
+                if (!isNaN(valor) && valor < 0) {
+                    feedback.style.display = "block";
+                    feedback.className = "alert alert-danger";
+                    feedback.innerHTML =
+                        `❌ Error: <strong>${valor}</strong> es negativo en la fila <strong>${i+2}</strong>.`;
+                    return;
+                }
+            }
+
+            // SI TODO OK → enviar
+            feedback.style.display = "none";
+            progress.style.display = "block";
+            btn.disabled = true;
+
+            const formData = new FormData(form);
+
+            fetch("{% url 'carga_datos' %}", {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                progress.style.display = "none";
+                btn.disabled = false;
+                feedback.style.display = "block";
+
+                if (data.status === "success") {
+                    feedback.className = "alert alert-success";
+                    feedback.innerHTML = `✅ <strong>¡Listo!</strong> ${data.message}`;
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    feedback.className = "alert alert-danger";
+                    feedback.innerHTML = `❌ ${data.message}`;
+                }
+            })
+            .catch(() => {
+                progress.style.display = "none";
+                btn.disabled = false;
+                feedback.className = "alert alert-danger";
+                feedback.style.display = "block";
+                feedback.innerHTML = "❌ Error de conexión.";
+            });
+        });
+    }
 });
 </script>
 
-
 <!-- ======================================================== -->
-<!-- 🔥 SCRIPT: Logout seguro -->
+<!-- LOGOUT -->
 <!-- ======================================================== -->
 <script>
-const logoutLink = document.getElementById('logoutLink');
-if (logoutLink) {
-    logoutLink.addEventListener('click', function(e) {
-        e.preventDefault();
-        document.getElementById('logoutForm').submit();
-    });
-}
+document.getElementById("logoutLink")?.addEventListener("click", function(e) {
+    e.preventDefault();
+    document.getElementById("logoutForm").submit();
+});
 </script>
 
-
 <!-- ======================================================== -->
-<!-- 🔥 SCRIPT NUEVO: ABRIR / CERRAR MENÚ DE USUARIO -->
+<!-- MENU USUARIO -->
 <!-- ======================================================== -->
 <script>
 const userIcon = document.getElementById("userIcon");
 const dropdownMenu = document.getElementById("dropdownMenu");
 
 if (userIcon && dropdownMenu) {
-
     userIcon.addEventListener("click", (e) => {
         e.stopPropagation();
         dropdownMenu.classList.toggle("show");
     });
 
-    document.addEventListener("click", (e) => {
-        if (!dropdownMenu.contains(e.target)) {
-            dropdownMenu.classList.remove("show");
-        }
+    document.addEventListener("click", () => {
+        dropdownMenu.classList.remove("show");
     });
 }
 </script>
-
 
 {% block scripts %}{% endblock %}
 
