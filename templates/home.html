@@ -6,55 +6,27 @@
 {% block styles %}
 <link rel="stylesheet" href="{% static 'css/home.css' %}">
 <style>
-/* --- CSS PARA EL FILTRO DE FECHAS --- */
-.filtro-fechas {
-    display: flex;
-    gap: 15px;
-    align-items: flex-end;
-    background: #ffffffdd;
-    padding: 12px 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    border: 1px solid #e5e7eb;
-    flex-wrap: wrap;
-}
-.filtro-fechas label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    margin-bottom: 3px;
-}
-.filtro-fechas input[type="date"] {
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-}
-.filtro-fechas .btn {
-    height: 38px;
-}
+
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- ENCABEZADO -->
 <div class="home-header">
   <h2 class="home-title">Hola, {{ request.user.first_name|default:request.user.username }} 👋</h2>
-  <p class="home-subtitle">Dashboard resumido del inventario</p>
+  <p class="home-subtitle">Resumen general del inventario</p>
 </div>
 
-<!-- FILTRO DE FECHAS -->
 <form method="get" class="filtro-fechas">
 
     <div>
         <label>Desde</label>
-        <input type="date" name="fecha_inicio"
-               value="{{ fecha_inicio|date:'Y-m-d' }}">
+        <input type="date" name="fecha_inicio" value="{{ fecha_inicio|date:'Y-m-d' }}">
     </div>
 
     <div>
         <label>Hasta</label>
-        <input type="date" name="fecha_fin"
-               value="{{ fecha_fin|date:'Y-m-d' }}">
+        <input type="date" name="fecha_fin" value="{{ fecha_fin|date:'Y-m-d' }}">
     </div>
 
     <button type="submit" class="btn btn-primary">Filtrar</button>
@@ -62,194 +34,554 @@
     {% if request.GET.fecha_inicio or request.GET.fecha_fin %}
     <a href="{% url 'home' %}" class="btn btn-outline-secondary">❌ Limpiar</a>
     {% endif %}
+
+    <div style="margin-left: auto; display: flex; flex-direction: column; align-items: flex-start; padding-left: 15px; border-left: 1px solid #ccc;">
+        <label>Vista Dashboard</label>
+        <select id="viewSelector" class="form-select" onchange="cambiarDashboard(this.value)">
+            <option value="producto" selected>📦 Productos</option>
+            <option value="categoria">📂 Categorías</option>
+            <option value="marca">🏷️ Marcas</option>
+        </select>
+    </div>
 </form>
 
-<!-- ALERTA FLOTANTE -->
-{% if productos_bajo_stock or productos_sin_stock %}
-<div id="alerta-stock-home" class="alerta-stock-home alerta-stock">
-    <h5>⚠ Productos con problemas de stock</h5>
 
-    <ul class="alerta-stock-list">
-        {% for p in productos_sin_stock %}
-        <li>🔴 
-            <a href="{% url 'inventario_lista' %}?q={{ p.nombre_producto }}">
-                {{ p.nombre_producto }}
-            </a> — Sin stock
-        </li>
-        {% endfor %}
-        {% for p in productos_bajo_stock %}
-        <li>🟡 
-            <a href="{% url 'inventario_lista' %}?q={{ p.nombre_producto }}">
-                {{ p.nombre_producto }}
-            </a> ({{ p.stock_actual }}/{{ p.stock_minimo }})
-        </li>
-        {% endfor %}
-    </ul>
 
-    <div class="alerta-stock-footer">
-        <a href="{% url 'inventario_lista' %}?solo_alertas=1" class="alerta-stock-link">
-            Ver en inventario
-        </a>
+<div id="dash-producto" class="dashboard-section">
+    
+    <section class="stats-summary">
+        <div class="stat-card"><h3>Total Productos</h3><div class="value">{{ total_productos }}</div></div>
+        <div class="stat-card"><h3>Stock Total</h3><div class="value">{{ stock_total }}</div></div>
+        <div class="stat-card"><h3>Sin Stock</h3><div class="value text-danger">{{ productos_sin_stock.count }}</div></div>
+        <div class="stat-card"><h3>Bajo Stock</h3><div class="value text-warning">{{ productos_bajo_stock.count }}</div></div>
+    </section>
+
+    <div class="charts-grid">
+        <div class="chart-container" style="grid-column: span 2;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0;">Movimientos productos general</h3>
+                <select id="rangoSelector" class="form-select form-select-sm" style="width:auto;">
+                    <option value="mes" selected>Mensual</option>
+                    <option value="semana">Semanal</option>
+                    <option value="dia">Diario</option>
+                </select>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="movimientosMesChart"></canvas>
+            </div>
+        </div>
+
+
+        
+        <div class="chart-container" style="overflow-y:auto; max-height:400px;">
+            <h3>⚠️ Detalle de Alertas</h3>
+            <ul style="padding-left:20px; list-style:none;">
+                {% for p in productos_sin_stock %}
+                    <li style="color:#e74c3c; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid #eee;">
+                        <strong>🔴 {{ p.nombre_producto }}</strong><br>
+                        <small>Sin stock (Mín: {{ p.stock_minimo }})</small>
+                    </li>
+                {% empty %}
+                   {% if not productos_bajo_stock %} <li class="text-muted">Todo en orden ✅</li> {% endif %}
+                {% endfor %}
+                
+                {% for p in productos_bajo_stock %}
+                    <li style="color:#f39c12; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid #eee;">
+                        <strong>🟡 {{ p.nombre_producto }}</strong><br>
+                        <small>Stock: {{ p.stock_actual }} / Mín: {{ p.stock_minimo }}</small>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+<div class="card mt-4 mb-5 shadow-sm" style="border:none; border-radius:10px; overflow:hidden;">
+    <div class="card-header bg-white p-4 border-bottom">
+        <h3 class="m-0" style="color:#2c3e50;"> Comparador de Productos</h3>
+        <p class="text-muted m-0 small">Selecciona hasta 10 productos para comparar sus movimientos en el periodo de fechas seleccionado.</p>
+    </div>
+
+    <div class="card-body p-0">
+        <div class="row g-0">
+            
+            <div class="col-md-9 p-4">
+                <div class="chart-wrapper" style="height: 400px; position: relative;">
+                    <canvas id="productosEspecificosChart"></canvas>
+                    <div id="chartPlaceholder" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#999; text-align:center;">
+                        <span style="font-size: 2rem;"></span><br>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3 bg-light border-start p-3" style="height: 450px; overflow: hidden; display: flex; flex-direction: column;">
+                
+                <h6 class="fw-bold text-uppercase text-muted mb-3" style="font-size: 0.75rem; letter-spacing: 1px;">
+                    Selección (Máx 10)
+                </h6>
+                
+                <input type="text" id="filtroProdInput" class="form-control form-control-sm mb-3" placeholder="🔍 Buscar producto..." onkeyup="filtrarListaProductos()">
+                
+                <div id="listaProductosCheck" style="overflow-y: auto; flex-grow: 1; padding-right: 5px;">
+                    <div class="text-center text-muted small mt-5">Cargando productos...</div>
+                </div>
+
+            </div>
+
+        </div>
     </div>
 </div>
-{% endif %}
+</div>
+    
+</div>
 
-<!-- TARJETAS -->
-<section class="stats-summary">
-    <div class="stat-card"><h3>Total Productos</h3><div class="value">{{ total_productos }}</div></div>
-    <div class="stat-card"><h3>Stock Total</h3><div class="value">{{ stock_total }}</div></div>
-    <div class="stat-card"><h3>Categorías</h3><div class="value">{{ total_categorias }}</div></div>
-    <div class="stat-card"><h3>Marcas</h3><div class="value">{{ total_marcas }}</div></div>
-</section>
 
-<!-- GRÁFICOS -->
-<section class="charts-grid">
 
-    <!-- MOVIMIENTOS -->
-    <div class="chart-container small-chart">
-        <h3>Movimientos</h3>
-        <canvas id="movimientosMesChart"></canvas>
+
+<div id="dash-categoria" class="dashboard-section" style="display:none;">
+    
+    <section class="stats-summary" style="grid-template-columns: repeat(1, 1fr);">
+        <div class="stat-card" style="border-left: 5px solid #36a2eb;">
+            <h3>Total Categorías Activas</h3><div class="value">{{ total_categorias }}</div>
+        </div>
+    </section>
+
+    <div class="charts-grid">
+        <div class="chart-container">
+            <h3>Distribución de Stock</h3>
+            <div class="chart-wrapper">
+                <canvas id="stockCategoriaChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-container" style="grid-column: span 2;">
+            <h3>Categorías con Stock Crítico</h3>
+            <div class="chart-wrapper">
+                <canvas id="criticoCategoriaChart"></canvas>
+            </div>
+        </div>
     </div>
+</div>
 
-    <!-- PIE -->
-    <div class="chart-container small-chart">
-        <h3>Categorías</h3>
-        <canvas id="stockCategoriaChart"></canvas>
+
+<div id="dash-marca" class="dashboard-section" style="display:none;">
+    
+    <section class="stats-summary" style="grid-template-columns: repeat(1, 1fr);">
+        <div class="stat-card" style="border-left: 5px solid #9966ff;">
+            <h3>Total Marcas Registradas</h3><div class="value">{{ total_marcas }}</div>
+        </div>
+    </section>
+
+    <div class="charts-grid">
+        <div class="chart-container">
+            <h3>Distribución por Marca</h3>
+            <div class="chart-wrapper">
+                <canvas id="stockMarcaChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-container" style="grid-column: span 2;">
+            <h3>Marcas con Stock Crítico</h3>
+            <div class="chart-wrapper">
+                <canvas id="criticoMarcaChart"></canvas>
+            </div>
+        </div>
     </div>
+</div>
 
-    <!-- STOCK CRÍTICO -->
-    <div class="chart-container small-chart">
-        <h3>Stock Crítico</h3>
-        <canvas id="stockCriticoMarcaChart"></canvas>
-    </div>
 
-</section>
 
-<!-- LISTAS -->
-<section class="low-stock-lists">
-    <div class="stock-list-container">
-        <h3>🟡 Bajo Stock</h3>
-        <ul>
-            {% for prod in productos_bajo_stock %}
-            <li>{{ prod.nombre_producto }} ({{ prod.stock_actual }}/{{ prod.stock_minimo }})</li>
-            {% empty %}
-            <li>No hay productos bajo mínimo.</li>
-            {% endfor %}
-        </ul>
-    </div>
-
-    <div class="stock-list-container">
-        <h3>🔴 Sin Stock</h3>
-        <ul>
-            {% for prod in productos_sin_stock %}
-            <li>{{ prod.nombre_producto }}</li>
-            {% empty %}
-            <li>No hay productos sin stock.</li>
-            {% endfor %}
-        </ul>
-    </div>
-</section>
-
-{% endblock %}
+{% endblock content %}
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
 /* ===========================================
-   ALERTA FLOTANTE DRAG
+   1. LÓGICA DE PESTAÑAS (DASHBOARDS)
 ===========================================*/
-document.addEventListener("DOMContentLoaded", () => {
-    const box = document.getElementById("alerta-stock-home");
-    if (!box) return;
-
-    let mov = false, offsetX = 0, offsetY = 0;
-
-    box.addEventListener("mousedown", e => {
-        mov = true;
-        offsetX = e.clientX - box.getBoundingClientRect().left;
-        offsetY = e.clientY - box.getBoundingClientRect().top;
-        box.style.cursor = "grabbing";
-    });
-
-    document.addEventListener("mousemove", e => {
-        if (!mov) return;
-
-        let x = e.clientX - offsetX;
-        let y = e.clientY - offsetY;
-
-        const maxX = window.innerWidth - box.offsetWidth - 10;
-        const maxY = window.innerHeight - box.offsetHeight - 10;
-
-        x = Math.min(Math.max(x, 10), maxX);
-        y = Math.min(Math.max(y, 70), maxY);
-
-        box.style.left = x + "px";
-        box.style.top = y + "px";
-    });
-
-    document.addEventListener("mouseup", () => mov = false);
-});
+function cambiarDashboard(vista) {
+    document.querySelectorAll('.dashboard-section').forEach(el => el.style.display = 'none');
+    const selected = document.getElementById('dash-' + vista);
+    if(selected) selected.style.display = 'block';
+}
 
 /* ===========================================
-   DATOS CHARTS
+   2. DATOS ESTÁTICOS DESDE DJANGO
 ===========================================*/
 const data = JSON.parse(`{{ chart_data_json|escapejs }}`);
 
-/* MOVIMIENTOS — Línea compacta */
-new Chart(document.getElementById('movimientosMesChart'), {
-    type: 'line',
-    data: {
-        labels: data.meses,
-        datasets: [
-            { label: 'Entradas', data: data.entradas, borderColor: '#4e79a7', borderWidth: 2 },
-            { label: 'Salidas', data: data.salidas, borderColor: '#e15759', borderWidth: 2 }
-        ]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        layout: { padding: { left: 20, right: 20 } },
-        elements: { point: { radius: 3 } }
-    }
+
+/* ===========================================
+   3. GRÁFICO DINÁMICO: MOVIMIENTOS (API)
+===========================================*/
+let movimientosChart = null;
+
+function cargarGraficoMovimientos(rango) {
+    const params = new URLSearchParams(window.location.search);
+    const fInicio = params.get('fecha_inicio') || '';
+    const fFin = params.get('fecha_fin') || '';
+
+    fetch(`/api/chart-data/?rango=${rango}&fecha_inicio=${fInicio}&fecha_fin=${fFin}`)
+        .then(response => response.json())
+        .then(apiData => {
+            const ctx = document.getElementById('movimientosMesChart').getContext('2d');
+            
+            if (movimientosChart) movimientosChart.destroy();
+
+            movimientosChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: apiData.labels,
+                    datasets: [
+                        { 
+                            label: 'Entradas', 
+                            data: apiData.entradas, 
+                            borderColor: '#4e79a7', 
+                            backgroundColor: 'rgba(78, 121, 167, 0.1)',
+                            fill: true, tension: 0.3 
+                        },
+                        { 
+                            label: 'Salidas', 
+                            data: apiData.salidas, 
+                            borderColor: '#e15759', 
+                            backgroundColor: 'rgba(225, 87, 89, 0.1)',
+                            fill: true, tension: 0.3 
+                        }
+                    ]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        })
+        .catch(err => console.error("Error cargando gráfico dinámico:", err));
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    cargarGraficoMovimientos('mes'); 
+    document.getElementById('rangoSelector').addEventListener('change', function() {
+        cargarGraficoMovimientos(this.value);
+    });
 });
 
-/* PIE */
-new Chart(document.getElementById('stockCategoriaChart'), {
-    type: 'doughnut',
-    data: {
-        labels: data.stock_por_categoria_labels,
-        datasets: [{
-            data: data.stock_por_categoria_values,
-            backgroundColor: [
-                '#4e79a7','#f28e2b','#e15759','#76b7b2',
-                '#59a14f','#edc948','#b07aa1','#ff9da7'
-            ]
-        }]
-    },
-    options: { responsive: true, maintainAspectRatio: false }
+
+/* ===========================================
+   4. GRÁFICOS ESTÁTICOS
+===========================================*/
+
+/* ===========================================
+   DEFINICIÓN DE PALETA DE COLORES (Global para consistencia)
+===========================================*/
+const paletaColores = [
+    '#4e79a7', // Azul
+    '#f28e2b', // Naranja
+    '#e15759', // Rojo
+    '#76b7b2', // Turquesa
+    '#59a14f', // Verde
+    '#edc948', // Amarillo
+    '#b07aa1', // Lila
+    '#ff9da7', // Rosa
+    '#9c755f', // Café
+    '#bab0ac'  // Gris
+];
+
+/* ===========================================
+   GRÁFICO 1: STOCK POR CATEGORÍA (PASTEL)
+===========================================*/
+if(document.getElementById('stockCategoriaChart')) {
+    new Chart(document.getElementById('stockCategoriaChart'), {
+        type: 'doughnut',
+        data: {
+            labels: data.stock_por_categoria_labels,
+            datasets: [{
+                data: data.stock_por_categoria_values,
+                backgroundColor: paletaColores, 
+                borderWidth: 2
+            }]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'right' } }
+        }
+    });
+}
+
+/* ===========================================
+   GRÁFICO 2: CRÍTICO POR CATEGORÍA (BARRAS)
+===========================================*/
+if(document.getElementById('criticoCategoriaChart')) {
+    
+    const coloresDinamicos = data.stock_critico_categoria_labels.map(nombreCat => {
+        const indiceEnPastel = data.stock_por_categoria_labels.indexOf(nombreCat);
+        if (indiceEnPastel >= 0) {
+            return paletaColores[indiceEnPastel % paletaColores.length];
+        } else {
+            return '#cccccc';
+        }
+    });
+
+    new Chart(document.getElementById('criticoCategoriaChart'), {
+        type: 'bar',
+        data: {
+            labels: data.stock_critico_categoria_labels,
+            datasets: [{
+                label: 'Productos Críticos',
+                data: data.stock_critico_categoria_values,
+                backgroundColor: coloresDinamicos, 
+                barThickness: 'flex', maxBarThickness: 40
+            }]
+        },
+        options: { 
+            indexAxis: 'y', 
+            responsive: true, 
+            maintainAspectRatio: false,
+            scales: {
+                x: { 
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,    
+                        precision: 0    
+                    }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        afterBody: function(context) {
+                            return data.stock_critico_categoria_tooltips[context[0].dataIndex];
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+/* ===========================================
+   GRÁFICO 4: CRÍTICO POR MARCA (BARRAS)
+===========================================*/
+if(document.getElementById('criticoMarcaChart')) {
+    const coloresMarcaDinamicos = data.stock_critico_marca_labels.map(nombreMarca => {
+        const indiceEnPastel = data.stock_por_marca_labels.indexOf(nombreMarca);
+        if (indiceEnPastel >= 0) {
+            return paletaColores[indiceEnPastel % paletaColores.length];
+        } else {
+            return '#cccccc';
+        }
+    });
+
+    new Chart(document.getElementById('criticoMarcaChart'), {
+        type: 'bar',
+        data: {
+            labels: data.stock_critico_marca_labels,
+            datasets: [{
+                label: 'Productos Críticos',
+                data: data.stock_critico_marca_values,
+                backgroundColor: coloresMarcaDinamicos,
+                barThickness: 'flex', maxBarThickness: 50
+            }]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            scales: {
+                y: {  
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,    
+                        precision: 0    
+                    }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        afterBody: function(context) {
+                            return data.stock_critico_marca_tooltips[context[0].dataIndex];
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+/* ===========================================
+   GRÁFICO 3: STOCK POR MARCA (PASTEL)
+===========================================*/
+if(document.getElementById('stockMarcaChart')) {
+    new Chart(document.getElementById('stockMarcaChart'), {
+        type: 'doughnut',
+        data: {
+            labels: data.stock_por_marca_labels,
+            datasets: [{
+                data: data.stock_por_marca_values,
+                backgroundColor: paletaColores, 
+                borderWidth: 2
+            }]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'right' } }
+        }
+    });
+}
+
+// *** VALIDACIÓN DE FECHAS — AISLADA, NO INTERFIERE EN NADA ***
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const inputDesde = document.querySelector("input[name='fecha_inicio']");
+    const inputHasta = document.querySelector("input[name='fecha_fin']");
+
+    if (!inputDesde || !inputHasta) return;
+
+    const hoy = new Date().toISOString().split("T")[0];
+
+    inputHasta.max = hoy;
+
+    function validarFechas() {
+        const desde = inputDesde.value;
+        const hasta = inputHasta.value;
+
+        if (hasta > hoy) {
+            inputHasta.value = hoy;
+            alert("La fecha 'Hasta' no puede superar la fecha actual.");
+             }
+
+                    if (desde && hasta && desde > hasta) {
+            inputDesde.value = hasta;
+            alert("La fecha 'Desde' no puede ser mayor que 'Hasta'.");
+        }
+    }
+
+    inputDesde.addEventListener("change", validarFechas);
+    inputHasta.addEventListener("change", validarFechas);
+
 });
 
-/* STOCK CRÍTICO — Barras delgadas */
-new Chart(document.getElementById('stockCriticoMarcaChart'), {
-    type: 'bar',
-    data: {
-        labels: data.stock_critico_marca_labels,
-        datasets: [{
-            label: 'Críticos',
-            data: data.stock_critico_marca_values,
-            backgroundColor: '#f28e2b',
-            borderColor: '#c56e1a',
-            borderWidth: 1,
-            barThickness: 22
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: { y: { beginAtZero: true } }
-    }
+
+// ===========================================
+// LÓGICA DEL COMPARADOR DE PRODUCTOS
+// ===========================================
+
+const listaProductos = {{ lista_productos_simple|default:"[]"|safe }}; 
+const MAX_SELECCION = 10;
+let productosChart = null;
+
+document.addEventListener("DOMContentLoaded", () => {
+    renderizarChecklist();
 });
+
+function renderizarChecklist() {
+    const container = document.getElementById("listaProductosCheck");
+    if(!container) return;
+
+    if(listaProductos.length === 0) {
+        container.innerHTML = "<p class='text-muted text-center'>No hay productos</p>";
+        return;
+    }
+
+    let html = "";
+    listaProductos.forEach(p => {
+        html += `
+            <div class="form-check product-item">
+                <input class="form-check-input prod-check" type="checkbox" value="${p.id}" id="chk_${p.id}" onchange="validarYActualizar(this)">
+                <label class="form-check-label text-truncate w-100" for="chk_${p.id}" title="${p.nombre_producto}" style="cursor:pointer;">
+                    ${p.nombre_producto}
+                </label>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+function filtrarListaProductos() {
+    const texto = document.getElementById("filtroProdInput").value.toLowerCase();
+    const items = document.querySelectorAll(".product-item");
+    items.forEach(div => {
+        const label = div.innerText.toLowerCase();
+        div.style.display = label.includes(texto) ? "block" : "none";
+    });
+}
+
+function validarYActualizar(checkbox) {
+    const seleccionados = document.querySelectorAll(".prod-check:checked");
+    
+    if (seleccionados.length > MAX_SELECCION) {
+        alert(`⚠️ Límite alcanzado: Solo puedes comparar hasta ${MAX_SELECCION} productos a la vez.`);
+        checkbox.checked = false; 
+        return;
+    }
+    actualizarGraficoProductos();
+}
+
+function actualizarGraficoProductos() {
+    const checkboxes = document.querySelectorAll(".prod-check:checked");
+    const ids = Array.from(checkboxes).map(cb => cb.value).join(",");
+
+    const ctx = document.getElementById('productosEspecificosChart').getContext('2d');
+
+    if (!ids) {
+        if(productosChart) {
+            productosChart.data.labels = [];
+            productosChart.data.datasets.forEach((dataset) => { dataset.data = []; });
+            productosChart.update();
+        }
+        return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const fInicio = params.get('fecha_inicio') || '';
+    const fFin = params.get('fecha_fin') || '';
+    const rango = document.getElementById('rangoSelector') ? document.getElementById('rangoSelector').value : 'mes';
+
+    fetch(`/api/chart-productos/?ids=${ids}&rango=${rango}&fecha_inicio=${fInicio}&fecha_fin=${fFin}`)
+        .then(res => res.json())
+        .then(data => {
+            
+            if (productosChart) productosChart.destroy();
+
+            productosChart = new Chart(ctx, {
+                type: 'bar', 
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        { 
+                            label: 'Entradas (Seleccionados)', 
+                            data: data.entradas, 
+                            backgroundColor: '#2ecc71', 
+                            borderColor: '#27ae60',
+                            borderWidth: 1 
+                        },
+                        { 
+                            label: 'Salidas (Seleccionados)', 
+                            data: data.salidas, 
+                            backgroundColor: '#e74c3c', 
+                            borderColor: '#c0392b',
+                            borderWidth: 1 
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { 
+                        y: { beginAtZero: true, title: {display: true, text: 'Cantidad'} } 
+                    },
+                    plugins: {
+                        tooltip: { mode: 'index', intersect: false }
+                    }
+                }
+            });
+        })
+        .catch(err => console.error("Error cargando productos:", err));
+}
 </script>
-
 {% endblock %}

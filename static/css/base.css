@@ -186,3 +186,73 @@ body {
     width: 100%;
     border-collapse: collapse;
 }
+
+/* 1. Convertimos el sidebar en Flexbox vertical */
+.sidebar {
+    display: flex !important;       /* Fuerza el modo Flex */
+    flex-direction: column;         /* Elementos uno debajo del otro */
+    justify-content: space-between; /* Distribuye espacio entre tope y fondo */
+    overflow: hidden;               /* Quitamos el scroll general del sidebar */
+}
+
+
+/* 3. Contenedor de Alertas (Fijo abajo) */
+.sidebar-alerts-bottom {
+    margin-top: auto;
+    margin-bottom: 20px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 8px;
+    padding: 15px;
+    border-left: 4px solid #e74c3c;
+    
+    /* CAMBIO AQUÍ: Aumentamos de 200px a 400px */
+    max-height: 400px;         
+    
+    overflow-y: auto;
+    flex-shrink: 0; 
+}
+
+/* Estilos de la lista */
+.alert-title {
+    color: #fff;
+    font-size: 0.9rem;
+    margin: 0 0 10px 0;
+    font-weight: bold;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 5px;
+}
+
+.alert-list-scroll {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.alert-item {
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+    white-space: nowrap;      /* Evita que el texto se rompa feo */
+    overflow: hidden;
+    text-overflow: ellipsis;  /* Puntos suspensivos si es muy largo */
+}
+
+.alert-item a {
+    color: #ccc;
+    text-decoration: none;
+    margin-left: 5px;
+}
+
+.alert-item a:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+.stock-num {
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+/* Scrollbar personalizada para que se vea bien en fondo oscuro */
+.sidebar-alerts-bottom::-webkit-scrollbar { width: 5px; }
+.sidebar-alerts-bottom::-webkit-scrollbar-thumb { background: #666; border-radius: 3px; }
+.sidebar-alerts-bottom::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }

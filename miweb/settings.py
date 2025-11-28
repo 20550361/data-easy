@@ -67,18 +67,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'miweb.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3', # Tu base de datos en la raíz
-    }
-}
-
-
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
@@ -107,7 +95,7 @@ TIME_ZONE = 'America/Santiago' # Zona horaria de Chile
 
 USE_I18N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # --- 3. UBICACIÓN DE ARCHIVOS ESTÁTICOS (CSS, JS, Imágenes) ---

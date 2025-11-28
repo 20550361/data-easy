@@ -38,9 +38,19 @@ urlpatterns = [
     # --- Datos y Analíticas ---
     path('estadisticas/', views.estadisticas, name='estadisticas'),
     path('carga_datos/', views.carga_datos, name='carga_datos'),
+    path('api/chart-data/', views.chart_data_api, name='chart_data_api'),
+    path('api/chart-productos/', views.chart_productos_api, name='chart_productos_api'),
 
     # --- FACTURACIÓN ---
     path('facturacion/', views.facturacion, name='facturacion'),
     path('facturacion/registrar/', views.registrar_factura, name='registrar_factura'),
+    path('facturacion/pdf/<int:id>/',views.factura_pdf,name='factura_pdf'),
     path('facturacion/pdf/<int:id>/', views.factura_pdf, name='factura_pdf'),
+
+
+
+
+    path('acceso-denegado/', views.acceso_denegado, name='acceso_denegado'),
+
+
 ]
