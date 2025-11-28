@@ -68,6 +68,8 @@ def home(request):
         context["productos_bajo_stock"].count()
     )
 
+    context["total_alertas"] = total_alertas
+
     return render(request, "home.html", context)
 
 
@@ -91,6 +93,8 @@ def recuperacion(request):
 @login_required(login_url="index")
 def lista_inventario(request):
     query = request.GET.get("q", "")
+    categorias_sel = [c for c in request.GET.getlist("f_categoria") if c.isdigit()]
+    marcas_sel = [m for m in request.GET.getlist("f_marca") if m.isdigit()]
     solo_alertas = request.GET.get("solo_alertas") == "1"
 
     productos = Producto.objects.select_related("categoria", "marca").all()
@@ -102,19 +106,43 @@ def lista_inventario(request):
             Q(marca__nombre_marca__icontains=query)
         )
 
+ # ============================================
+    # ⛏ FILTRO: MULTISELECT Categoría
+    # ============================================
+    if categorias_sel:
+        productos = productos.filter(categoria_id__in=categorias_sel)
+
+    # ============================================
+    # 🔧 FILTRO: MULTISELECT Marca
+    # ============================================
+    if marcas_sel:
+        productos = productos.filter(marca_id__in=marcas_sel)
+
+    # ============================================
+    # ⚠ FILTRO: Solo alertas (stock bajo + 0)
+    # ============================================
     if solo_alertas:
         productos = productos.filter(
             Q(stock_actual=0) |
             Q(stock_actual__gt=0, stock_actual__lte=F("stock_minimo"))
         )
 
+    # ============================================
+    # ⚠ Queryset para el modal de alertas global
+    # ============================================
     alertas_qs = Producto.objects.filter(
         Q(stock_actual=0) | Q(stock_actual__gt=0, stock_actual__lte=F("stock_minimo"))
     )
+    # ============================================
+    # 📄 PAGINACIÓN
+    # ============================================
 
     paginator = Paginator(productos.order_by("nombre_producto"), 20)
     page_obj = paginator.get_page(request.GET.get("page"))
-
+    
+    # ============================================
+    # CONTEXTO FINAL
+    # ============================================
     context = {
         "page_obj": page_obj,
         "categorias": Categoria.objects.all(),
@@ -125,6 +153,8 @@ def lista_inventario(request):
         "total_productos": Producto.objects.count(),
         "sin_stock_items": alertas_qs.filter(stock_actual=0),
         "bajo_stock_items": alertas_qs.filter(stock_actual__gt=0),
+        "categorias_sel": categorias_sel,
+        "marcas_sel": marcas_sel,
     }
 
     return render(request, "inventario.html", context)
@@ -136,16 +166,30 @@ def lista_inventario(request):
 @login_required(login_url="index")
 def crear_producto(request):
     if request.method == "POST":
-        categoria = Categoria.objects.filter(id=request.POST.get("categoria")).first()
-        marca = Marca.objects.filter(id=request.POST.get("marca")).first()
+     
+        nombre = request.POST.get("nombre_producto").strip()
+        descripcion = request.POST.get("descripcion")
+        categoria_id = request.POST.get("categoria")
+        marca_id = request.POST.get("marca")
+        stock_actual = int(request.POST.get("stock_actual", 0))
+        stock_minimo = int(request.POST.get("stock_minimo", 0))
+
+        # 🔍 VALIDACIÓN: evitar productos duplicados
+        if Producto.objects.filter(nombre_producto__iexact=nombre).exists():
+            messages.error(request, f"❌ Ya existe un producto con el nombre '{nombre}'.")
+            return redirect("inventario_lista")
+
+        categoria = Categoria.objects.filter(id=categoria_id).first()
+        marca = Marca.objects.filter(id=marca_id).first()
+
 
         Producto.objects.create(
-            nombre_producto=request.POST.get("nombre_producto"),
-            descripcion=request.POST.get("descripcion"),
+            nombre_producto=nombre,
+            descripcion=descripcion,
             categoria=categoria,
             marca=marca,
-            stock_actual=int(request.POST.get("stock_actual", 0)),
-            stock_minimo=int(request.POST.get("stock_minimo", 0)),
+            stock_actual=stock_actual,
+            stock_minimo=stock_minimo,
         )
 
         messages.success(request, "Producto creado correctamente.")
@@ -492,7 +536,17 @@ def carga_datos(request):
 
 
             def limpiar(txt):
-                return str(txt).strip().lower().replace(" ", "_").replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u")
+                                return (
+                    str(txt)
+                    .strip()
+                    .lower()
+                    .replace(" ", "_")
+                    .replace("á", "a")
+                    .replace("é", "e")
+                    .replace("í", "i")
+                    .replace("ó", "o")
+                    .replace("ú", "u")
+                )
 
 
             df.columns = [limpiar(c) for c in df.columns]
@@ -502,8 +556,10 @@ def carga_datos(request):
             faltan = [c for c in cols_ok if c not in df.columns]
 
             if faltan:
-                return JsonResponse({"status": "error", "message": f"Faltan columnas en el Excel: {', '.join(faltan)}"})
-
+                                return JsonResponse({
+                    "status": "error",
+                    "message": f"Faltan columnas en el Excel: {', '.join(faltan)}"
+                })
            
             count = 0
             nuevos = 0
@@ -519,14 +575,51 @@ def carga_datos(request):
                 if pd.notna(row.get("marca")):
                     marca_obj, _ = Marca.objects.get_or_create(nombre_marca=str(row["marca"]).strip())
 
+                                # =====================================================
+                # VALIDACIÓN NUMÉRICA PARA stock_actual Y stock_minimo
+                # =====================================================
+
+                # Validar stock_actual
+                try:
+                    stock_actual_val = int(row.get("stock_actual", 0))
+                except:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": f"❌ El valor de stock_actual debe ser numérico. Revisa el producto: {row.get('nombre_producto')}"
+                    })
+
+                if stock_actual_val < 0:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": f"❌ No se permiten números negativos en stock_actual. Producto: {row.get('nombre_producto')}"
+                    })
+
+                # Validar stock_minimo
+                try:
+                    stock_minimo_val = int(row.get("stock_minimo", 5))
+                except:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": f"❌ El valor de stock_minimo debe ser numérico. Revisa el producto: {row.get('nombre_producto')}"
+                    })
+
+                if stock_minimo_val < 0:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": f"❌ No se permiten números negativos en stock_minimo. Producto: {row.get('nombre_producto')}"
+                    })
+
+                # =====================================================
+                # GUARDADO FINAL
+                # =====================================================
                 
                 _, created = Producto.objects.update_or_create(
                     nombre_producto=row["nombre_producto"],
                     defaults={
                         "categoria": cat_obj,
                         "marca": marca_obj,
-                        "stock_actual": int(row.get("stock_actual", 0)),
-                        "stock_minimo": int(row.get("stock_minimo", 5)),
+                        "stock_actual": stock_actual_val,
+                        "stock_minimo": stock_minimo_val,
                         "descripcion": row.get("descripcion", "")
                     }
                 )

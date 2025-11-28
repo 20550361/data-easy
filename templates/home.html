@@ -148,7 +148,7 @@
 
 
 
-{% endblock %}
+{% endblock content %}
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -390,6 +390,43 @@ if(document.getElementById('stockMarcaChart')) {
         }
     });
 }
+
+// *** VALIDACIÓN DE FECHAS — AISLADA, NO INTERFIERE EN NADA ***
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const inputDesde = document.querySelector("input[name='fecha_inicio']");
+    const inputHasta = document.querySelector("input[name='fecha_fin']");
+
+    if (!inputDesde || !inputHasta) return;
+
+    // Fecha actual
+    const hoy = new Date().toISOString().split("T")[0];
+
+    // Limitar "hasta" a hoy
+    inputHasta.max = hoy;
+
+    function validarFechas() {
+        const desde = inputDesde.value;
+        const hasta = inputHasta.value;
+
+        if (hasta > hoy) {
+            inputHasta.value = hoy;
+            alert("La fecha 'Hasta' no puede superar la fecha actual.");
+             }
+
+                    if (desde && hasta && desde > hasta) {
+            inputDesde.value = hasta;
+            alert("La fecha 'Desde' no puede ser mayor que 'Hasta'.");
+        }
+    }
+
+    inputDesde.addEventListener("change", validarFechas);
+    inputHasta.addEventListener("change", validarFechas);
+
+});
+
+
 
 </script>
 {% endblock %}
