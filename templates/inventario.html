@@ -1,0 +1,505 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Inventario - DataEasy{% endblock %}
+
+{% block styles %}
+<style>
+  .inv-summary-card {
+    background: #f8fafc;
+    border-radius: .75rem;
+    padding: 12px 16px;
+    border: 1px solid #e5e7eb;
+  }
+  .inv-summary-label { font-size: .85rem; color: #6b7280; margin-bottom: 2px; }
+  .inv-summary-value { font-size: 1.4rem; font-weight: 700; }
+
+  /* Arreglo visual del modal */
+  .modal-content {
+    border-radius: .8rem;
+  }
+  .modal-header {
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .modal-footer {
+    border-top: 1px solid #e5e7eb;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+  <!-- TÍTULO + BUSCADOR -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-3">
+    <div>
+      <h2 class="h4 mb-1">📦 Inventario</h2>
+      <p class="text-muted mb-0">Gestiona todos los productos de tu inventario.</p>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+
+      {% if solo_alertas %}
+        <a href="{% url 'inventario_lista' %}" class="btn btn-warning">Ver todos</a>
+      {% else %}
+        <a href="?solo_alertas=1" class="btn btn-warning">Solo alertas ({{ total_alertas }})</a>
+      {% endif %}
+
+      <form method="get" class="d-flex gap-2">
+        <input type="search" class="form-control" name="q" value="{{ search_query }}"
+               placeholder="Buscar por producto, marca o categoría..."
+               maxlength="30">
+        <button type="submit" class="btn btn-primary">Buscar</button>
+
+        {% if search_query or request.GET.f_categoria or request.GET.f_marca %}
+          <a href="{% url 'inventario_lista' %}" class="btn btn-outline-secondary">Limpiar</a>
+        {% endif %}
+      </form>
+
+      <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalNuevoProducto">
+        + Nuevo producto
+      </button>
+
+      <a href="{% url 'exportar_excel' %}?q={{ search_query }}{% if solo_alertas %}&solo_alertas=1{% endif %}"
+         class="btn btn-outline-info">📥 Exportar Excel</a>
+
+    </div>
+  </div>
+
+  <!-- TARJETAS -->
+  <div class="row g-3 mb-3">
+    <div class="col-auto">
+      <div class="inv-summary-card">
+        <div class="inv-summary-label">Total productos</div>
+        <div class="inv-summary-value">{{ total_productos }}</div>
+      </div>
+    </div>
+    <div class="col-auto">
+      <div class="inv-summary-card">
+        <div class="inv-summary-label">En alerta</div>
+        <div class="inv-summary-value text-warning">{{ total_alertas }}</div>
+      </div>
+    </div>
+  </div>
+
+  {% if total_alertas %}
+  <div class="alert alert-warning d-flex align-items-center mb-3">
+    <span class="me-2">⚠️</span>
+    <div>Hay <strong>{{ total_alertas }}</strong> productos con stock bajo o sin stock.</div>
+  </div>
+  {% endif %}
+
+  <!-- TABLA -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Producto</th>
+
+              <!-- FILTRO CATEGORÍA -->
+              <th>
+                Categoría
+                <form method="get">
+                  <select name="f_categoria" class="form-select form-select-sm mt-1" onchange="this.form.submit()">
+                    <option value="">Todas</option>
+                    {% for c in categorias %}
+                      <option value="{{ c.id }}"
+                              {% if request.GET.f_categoria == c.id|stringformat:'s' %}selected{% endif %}>
+                        {{ c.nombre_categoria }}
+                      </option>
+                    {% endfor %}
+                  </select>
+
+                  {% if request.GET.f_marca %}
+                    <input type="hidden" name="f_marca" value="{{ request.GET.f_marca }}">
+                  {% endif %}
+                  {% if request.GET.q %}
+                    <input type="hidden" name="q" value="{{ request.GET.q }}">
+                  {% endif %}
+                  {% if solo_alertas %}
+                    <input type="hidden" name="solo_alertas" value="1">
+                  {% endif %}
+                </form>
+              </th>
+
+              <!-- FILTRO MARCA -->
+              <th>
+                Marca
+                <form method="get">
+                  <select name="f_marca" class="form-select form-select-sm mt-1" onchange="this.form.submit()">
+                    <option value="">Todas</option>
+                    {% for m in marcas %}
+                      <option value="{{ m.id }}"
+                              {% if request.GET.f_marca == m.id|stringformat:'s' %}selected{% endif %}>
+                        {{ m.nombre_marca }}
+                      </option>
+                    {% endfor %}
+                  </select>
+
+                  {% if request.GET.f_categoria %}
+                    <input type="hidden" name="f_categoria" value="{{ request.GET.f_categoria }}">
+                  {% endif %}
+                  {% if request.GET.q %}
+                    <input type="hidden" name="q" value="{{ request.GET.q }}">
+                  {% endif %}
+                  {% if solo_alertas %}
+                    <input type="hidden" name="solo_alertas" value="1">
+                  {% endif %}
+                </form>
+              </th>
+
+              <th class="text-end">Stock actual</th>
+              <th class="text-end">Stock mínimo</th>
+              <th>Estado</th>
+              <th class="text-center">Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for producto in page_obj %}
+              {% with sa=producto.stock_actual sm=producto.stock_minimo %}
+              <tr class="{% if sa == 0 %}table-danger{% elif sa <= sm %}table-warning{% endif %}">
+                <td>{{ producto.nombre_producto }}</td>
+                <td>{{ producto.categoria.nombre_categoria|default:"N/A" }}</td>
+                <td>{{ producto.marca.nombre_marca|default:"N/A" }}</td>
+                <td class="text-end">{{ producto.stock_actual }}</td>
+                <td class="text-end">{{ producto.stock_minimo }}</td>
+
+                <td>
+                  {% if producto.stock_actual == 0 %}
+                    <span class="badge bg-danger">Sin stock</span>
+                  {% elif producto.stock_actual <= producto.stock_minimo %}
+                    <span class="badge bg-warning text-dark">Stock bajo</span>
+                  {% else %}
+                    <span class="badge bg-success">Normal</span>
+                  {% endif %}
+                </td>
+
+                <td class="text-center">
+
+                  <!-- EDITAR -->
+                  <button type="button" class="btn btn-sm btn-outline-primary me-1 btn-edit"
+                          data-bs-toggle="modal"
+                          data-bs-target="#modalEditarProducto"
+
+                          data-url="{% url 'inventario_editar' producto.id %}"
+                          data-nombre="{{ producto.nombre_producto }}"
+                          data-descripcion="{{ producto.descripcion }}"
+                          data-categoria="{{ producto.categoria.id|default:'' }}"
+                          data-marca="{{ producto.marca.id|default:'' }}"
+                          data-stock-actual="{{ producto.stock_actual }}"
+                          data-stock-minimo="{{ producto.stock_minimo }}">
+                    Editar
+                  </button>
+
+                  <!-- ELIMINAR -->
+                  <button type="button" class="btn btn-sm btn-outline-danger btn-delete"
+                          data-bs-toggle="modal"
+                          data-bs-target="#modalEliminarProducto"
+                          data-url="{% url 'inventario_eliminar' producto.id %}"
+                          data-nombre="{{ producto.nombre_producto }}">
+                    Eliminar
+                  </button>
+
+                </td>
+              </tr>
+              {% endwith %}
+            {% empty %}
+              <tr>
+                <td colspan="7" class="text-center text-muted py-4">No se encontraron productos.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGINACIÓN -->
+  <div class="d-flex justify-content-between align-items-center mt-3">
+    <span class="text-muted">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}.</span>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+          <li class="page-item"><a class="page-link" href="?page=1">« Primera</a></li>
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a></li>
+        {% endif %}
+
+        {% if page_obj.has_next %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Siguiente</a></li>
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Última »</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- MODAL NUEVO PRODUCTO -->
+<div class="modal fade" id="modalNuevoProducto" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+
+      <form method="post" action="{% url 'inventario_nuevo' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Nuevo producto</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+
+          <div class="mb-3">
+            <label class="form-label">Nombre *</label>
+            <input type="text" name="nombre_producto" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Descripción *</label>
+            <textarea name="descripcion" class="form-control" required></textarea>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Categoría *</label>
+              <select name="categoria" class="form-select" required>
+                <option value="" disabled selected>Seleccione una categoría</option>
+                {% for c in categorias %}
+                  <option value="{{ c.id }}">{{ c.nombre_categoria }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Marca *</label>
+              <select name="marca" class="form-select" required>
+                <option value="" disabled selected>Seleccione una marca</option>
+                {% for m in marcas %}
+                  <option value="{{ m.id }}">{{ m.nombre_marca }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="row g-3 mt-2">
+            <div class="col-md-6">
+              <label class="form-label">Stock actual *</label>
+              <input type="number" name="stock_actual" class="form-control" min="0" value="0" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Stock mínimo *</label>
+              <input type="number" name="stock_minimo" class="form-control" min="0" value="5" required>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar producto</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR -->
+<div class="modal fade" id="modalEditarProducto" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+
+      <form method="post">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Editar producto</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+
+          <div class="mb-3">
+            <label class="form-label">Nombre *</label>
+            <input type="text" name="nombre_producto" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Descripción *</label>
+            <textarea name="descripcion" class="form-control" required></textarea>
+          </div>
+
+          <div class="row g-3">
+
+            <div class="col-md-6">
+              <label class="form-label">Categoría *</label>
+              <select name="categoria" class="form-select" required>
+                {% for c in categorias %}
+                  <option value="{{ c.id }}">{{ c.nombre_categoria }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Marca *</label>
+              <select name="marca" class="form-select" required>
+                {% for m in marcas %}
+                  <option value="{{ m.id }}">{{ m.nombre_marca }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+          </div>
+
+          <div class="row g-3 mt-2">
+
+            <div class="col-md-6">
+              <label class="form-label">Stock actual *</label>
+              <input type="number" name="stock_actual" class="form-control" min="0" required readonly disabled>
+
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Stock mínimo *</label>
+              <input type="number" name="stock_minimo" class="form-control" min="0" required>
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar cambios</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ELIMINAR -->
+<div class="modal fade" id="modalEliminarProducto" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title text-danger">Eliminar producto</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          ¿Eliminar <strong id="delete-product-name"></strong>?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- JS: MODALES -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const editButtons = document.querySelectorAll(".btn-edit");
+    const editForm = document.querySelector("#modalEditarProducto form");
+
+    editButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+
+            editForm.action = btn.dataset.url;
+
+            editForm.querySelector("input[name='nombre_producto']").value = btn.dataset.nombre;
+            editForm.querySelector("textarea[name='descripcion']").value = btn.dataset.descripcion;
+            editForm.querySelector("select[name='categoria']").value = btn.dataset.categoria || "";
+            editForm.querySelector("select[name='marca']").value = btn.dataset.marca || "";
+            editForm.querySelector("input[name='stock_actual']").value = btn.dataset.stockActual;
+            editForm.querySelector("input[name='stock_minimo']").value = btn.dataset.stockMinimo;
+        });
+    });
+
+    const deleteButtons = document.querySelectorAll(".btn-delete");
+    const deleteForm = document.querySelector("#modalEliminarProducto form");
+    const deleteName = document.querySelector("#delete-product-name");
+
+    deleteButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            deleteForm.action = btn.dataset.url;
+            deleteName.textContent = btn.dataset.nombre;
+        });
+    });
+
+});
+</script>
+
+{% if total_alertas > 0 %}
+<div class="modal fade" id="alertaInventarioModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header 
+        {% if sin_stock_items.count > 0 %} bg-danger text-white
+        {% else %} bg-warning
+        {% endif %}">
+        <h5 class="modal-title">
+          {% if sin_stock_items.count > 0 %}
+            🔴 Productos sin stock
+          {% else %}
+            🟡 Productos con stock bajo
+          {% endif %}
+        </h5>
+      </div>
+
+      <div class="modal-body">
+
+        {% if sin_stock_items %}
+          <h6>🔴 Sin stock</h6>
+          <ul class="mb-3">
+            {% for p in sin_stock_items %}
+              <li><strong>{{ p.nombre_producto }}</strong>
+                — {{ p.categoria.nombre_categoria|default:"N/A" }}
+              </li>
+            {% endfor %}
+          </ul>
+          <hr>
+        {% endif %}
+
+        {% if bajo_stock_items %}
+          <h6>🟡 Stock bajo</h6>
+          <ul>
+            {% for p in bajo_stock_items %}
+              <li>
+                <strong>{{ p.nombre_producto }}</strong>
+                — {{ p.categoria.nombre_categoria|default:"N/A" }}
+                ({{ p.stock_actual }}/{{ p.stock_minimo }})
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var alertaModal = document.getElementById('alertaInventarioModal');
+    if (alertaModal) {
+        var modal = new bootstrap.Modal(alertaModal);
+        modal.show();
+    }
+});
+</script>
+{% endif %}
+
+{% endblock %}
