@@ -117,6 +117,6 @@ class DetalleFactura(models.Model):
     # Nuevos datos informativos:
     categoria = models.CharField(max_length=255, null=True, blank=True)
     marca = models.CharField(max_length=255, null=True, blank=True)
-
+    tipo_movimiento = models.CharField(max_length=50, default='salida')
     def __str__(self):
         return f"{self.producto.nombre_producto} (x{self.cantidad})"
