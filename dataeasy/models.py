@@ -89,8 +89,8 @@ class SeguridadUsuario(models.Model):
 # MODELOS DE FACTURACIÓN
 # ============================
 class Factura(models.Model):
-    cliente_nombre = models.CharField(max_length=100)
-    cliente_apellido = models.CharField(max_length=100)
+    cliente_nombre = models.CharField(max_length=100, null=True, blank=True)
+    cliente_apellido = models.CharField(max_length=100, null=True, blank=True)
     cliente_rut = models.CharField(max_length=15)
     fecha = models.DateTimeField(auto_now_add=True)
 

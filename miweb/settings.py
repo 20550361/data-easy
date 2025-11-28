@@ -119,7 +119,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'dataeasy',
         'USER': 'root',
-        'PASSWORD': '123456',
+        'PASSWORD': 'Admin1234',
         'HOST': 'localhost',
         'PORT': '3306',
         'OPTIONS': {
