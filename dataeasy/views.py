@@ -639,12 +639,12 @@ def exportar_excel(request):
         )
 
     data = [{
-        "nombre_product": p.nombre_producto,
+        "nombre_producto": p.nombre_producto,
         "descripcion": p.descripcion or "",
         "categoria": p.categoria.nombre_categoria if p.categoria else "",
         "marca": p.marca.nombre_marca if p.marca else "",
-        "stock_actua": p.stock_actual,
-        "stock_minim": p.stock_minimo,
+        "stock_actual": p.stock_actual,
+        "stock_minimo": p.stock_minimo,
     } for p in productos]
 
     df = pd.DataFrame(data)
