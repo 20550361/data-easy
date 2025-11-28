@@ -363,8 +363,8 @@ document.addEventListener("DOMContentLoaded", function () {
             // llenar datos
             editForm.querySelector("input[name='nombre_producto']").value = btn.dataset.nombre;
             editForm.querySelector("textarea[name='descripcion']").value = btn.dataset.descripcion;
-            editForm.querySelector("select[name='categoria']").value = btn.dataset.categoria;
-            editForm.querySelector("select[name='marca']").value = btn.dataset.marca;
+            editForm.querySelector("select[name='categoria']").value = btn.dataset.categoria || "";
+            editForm.querySelector("select[name='marca']").value = btn.dataset.marca || "";
             editForm.querySelector("input[name='stock_actual']").value = btn.dataset.stockActual;
             editForm.querySelector("input[name='stock_minimo']").value = btn.dataset.stockMinimo;
         });
