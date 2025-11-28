@@ -60,11 +60,7 @@ def acceso_denegado(request):
 # ============================================================
 @login_required(login_url="index")
 def home(request):
-
-    # Construimos contexto general
     context = _build_estadisticas_context(request)
-
-    # ALERTA si hay productos en mal estado
     total_alertas = (
         context["productos_sin_stock"].count() +
         context["productos_bajo_stock"].count()
@@ -176,7 +172,6 @@ def crear_producto(request):
         stock_actual = int(request.POST.get("stock_actual", 0))
         stock_minimo = int(request.POST.get("stock_minimo", 0))
 
-        # 🔍 VALIDACIÓN: evitar productos duplicados
         if Producto.objects.filter(nombre_producto__iexact=nombre).exists():
             messages.error(request, f"❌ Ya existe un producto con el nombre '{nombre}'.")
             return redirect("inventario_lista")
@@ -184,11 +179,6 @@ def crear_producto(request):
         categoria = Categoria.objects.filter(id=categoria_id).first()
         marca = Marca.objects.filter(id=marca_id).first()
 
-
-        # Cuando se crea un producto, se crea con el stock inicial,
-        # y no se genera movimiento, ya que el MovimientoInventario Inline 
-        # en el Admin se encarga de crear los movimientos posteriores.
-        # Si quieres que esto genere un movimiento inicial, el código iría aquí.
         Producto.objects.create(
             nombre_producto=nombre,
             descripcion=descripcion,
@@ -217,7 +207,6 @@ def editar_producto(request, id_producto):
         producto.categoria = Categoria.objects.filter(id=request.POST.get("categoria")).first()
         producto.marca = Marca.objects.filter(id=request.POST.get("marca")).first()
         
-        # El stock_actual se ignora o se maneja con movimientos, pero se permite editar el minimo
         producto.stock_minimo = int(request.POST.get("stock_minimo", 0))
 
         producto.save()
@@ -266,7 +255,6 @@ def crear_usuario(request):
     else:
         form = UserCreateForm()
 
-    # Pasar el título y modo al template para que sepa si es crear o editar
     return render(request, "usuario_form.html", {"form": form, "titulo": "Crear Usuario", "modo": "crear"})
 
 
@@ -281,7 +269,6 @@ def editar_usuario(request, pk):
         messages.success(request, "Usuario actualizado.")
         return redirect("lista_usuarios")
 
-    # Pasar el título y modo al template para que sepa si es crear o editar
     return render(request, "usuario_form.html", {"form": form, "titulo": f"Editar Usuario: {usuario.username}", "modo": "editar"})
 
 
@@ -302,7 +289,6 @@ def eliminar_usuario(request, pk):
 # 6. ESTADÍSTICAS
 # ============================================================
 def _build_estadisticas_context(request):
-    # 1. Filtros de Fecha
     fecha_inicio = request.GET.get("fecha_inicio")
     fecha_fin = request.GET.get("fecha_fin")
     hoy = timezone.now().date()
@@ -317,21 +303,17 @@ def _build_estadisticas_context(request):
     else:
         fecha_fin = hoy
 
-    # 2. Query de Movimientos (para gráfico de línea estático si se usa)
     movimientos = MovimientoInventario.objects.filter(
         fecha_movimiento__date__range=[fecha_inicio, fecha_fin]
     )
 
-    # 3. Lógica de Productos Críticos (Stock 0 o menor al mínimo)
     productos_criticos_total = Producto.objects.filter(
         stock_actual__lte=F("stock_minimo")
     ).select_related('categoria', 'marca')
 
-    # Listas separadas solo para mostrar contadores en las tarjetas
     productos_sin = productos_criticos_total.filter(stock_actual=0)
     productos_bajo = productos_criticos_total.filter(stock_actual__gt=0)
 
-    # --- PROCESAMIENTO: CRÍTICO POR CATEGORÍA ---
     critico_cat_map = {}
     critico_cat_nombres = {}
 
@@ -346,7 +328,6 @@ def _build_estadisticas_context(request):
         estado = "(0)" if p.stock_actual == 0 else f"({p.stock_actual}/{p.stock_minimo})"
         critico_cat_nombres[cat_name].append(f"{p.nombre_producto} {estado}")
 
-    # --- PROCESAMIENTO: CRÍTICO POR MARCA ---
     critico_marca_map = {}
     critico_marca_nombres = {}
 
@@ -361,7 +342,6 @@ def _build_estadisticas_context(request):
         estado = "(0)" if p.stock_actual == 0 else f"({p.stock_actual}/{p.stock_minimo})"
         critico_marca_nombres[marca_name].append(f"{p.nombre_producto} {estado}")
 
-    # Helper para limitar tooltips
     def preparar_tooltip(lista_nombres):
         resultado = []
         for nombres in lista_nombres:
@@ -371,9 +351,7 @@ def _build_estadisticas_context(request):
             resultado.append(recorte)
         return resultado
 
-    # 4. Construcción del JSON Final
     chart_data = {
-        # --- GRAFICOS DE PASTEL (DISTRIBUCIÓN) ---
         "stock_por_categoria_labels": [
             c["categoria__nombre_categoria"] or "Sin categoría"
             for c in Producto.objects.values("categoria__nombre_categoria").annotate(total=Sum("stock_actual"))
@@ -391,7 +369,6 @@ def _build_estadisticas_context(request):
             for m in Producto.objects.values("marca__nombre_marca").annotate(total=Sum("stock_actual"))
         ],
 
-        # --- GRAFICOS DE BARRAS (CRÍTICOS) ---
         "stock_critico_categoria_labels": list(critico_cat_map.keys()),
         "stock_critico_categoria_values": list(critico_cat_map.values()),
         "stock_critico_categoria_tooltips": preparar_tooltip(list(critico_cat_nombres.values())),
@@ -401,7 +378,6 @@ def _build_estadisticas_context(request):
         "stock_critico_marca_tooltips": preparar_tooltip(list(critico_marca_nombres.values())),
     }
 
-    # 5. Retorno del Contexto
     return {
         "fecha_inicio": fecha_inicio,
         "fecha_fin": fecha_fin,
@@ -412,8 +388,6 @@ def _build_estadisticas_context(request):
         "total_productos": Producto.objects.count(),
         "stock_total": Producto.objects.aggregate(t=Sum("stock_actual"))["t"] or 0,
         "chart_data_json": json.dumps(chart_data, cls=DjangoJSONEncoder),
-        
-        # 👇 ESTA ES LA LÍNEA CLAVE PARA EL CHECKLIST DEL COMPARADOR 👇
         "lista_productos_simple": list(Producto.objects.values('id', 'nombre_producto').order_by('nombre_producto')),
     }
 
@@ -430,7 +404,6 @@ def chart_productos_api(request):
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
 
-    # 1. Validar IDs
     if not ids_str:
         return JsonResponse({"labels": [], "entradas": [], "salidas": []})
 
@@ -439,7 +412,6 @@ def chart_productos_api(request):
     except ValueError:
         return JsonResponse({"labels": [], "entradas": [], "salidas": []})
 
-    # 2. Configurar Fechas
     hoy = timezone.now().date()
     if not fecha_inicio:
         fecha_inicio = hoy - timedelta(days=180)
@@ -457,8 +429,6 @@ def chart_productos_api(request):
         except ValueError:
             fecha_fin = hoy
 
-    # 3. CONSULTA AGRUPADA POR PRODUCTO
-    # Filtramos por fecha y productos, pero agrupamos por NOMBRE del producto
     qs = MovimientoInventario.objects.filter(
         fecha_movimiento__date__range=[fecha_inicio, fecha_fin],
         producto_id__in=id_list
@@ -468,10 +438,8 @@ def chart_productos_api(request):
         total=Sum('cantidad')
     ).order_by('producto__nombre_producto')
 
-    # 4. Procesar Datos
+
     data_map = {}
-    
-    # Pre-llenamos el mapa con los productos seleccionados
     for prod_id in id_list:
        try:
            nombre = Producto.objects.get(id=prod_id).nombre_producto
@@ -483,7 +451,6 @@ def chart_productos_api(request):
     for row in qs:
         nombre = row['producto__nombre_producto']
         if nombre not in data_map:
-            # Esto puede ocurrir si se selecciona un producto que no existe, pero ya lo manejamos arriba
             continue
         
         if row['tipo_movimiento'] == 'entrada':
@@ -491,10 +458,9 @@ def chart_productos_api(request):
         elif row['tipo_movimiento'] == 'salida':
             data_map[nombre]['salidas'] += row['total']
 
-    # Separar en listas
     labels = list(data_map.keys())
     return JsonResponse({
-        "labels": labels, # Nombres de productos
+        "labels": labels, 
         "entradas": [data_map[k]['entradas'] for k in labels],
         "salidas": [data_map[k]['salidas'] for k in labels]
     })
@@ -523,10 +489,10 @@ def chart_data_api(request):
 
     if rango == 'semana':
         trunc_func = TruncWeek('fecha_movimiento')
-        fmt = '%W-%Y' # Semana-Año
+        fmt = '%W-%Y' 
     elif rango == 'dia':
         trunc_func = TruncDay('fecha_movimiento')
-        fmt = '%d/%m' # Día/Mes
+        fmt = '%d/%m' 
     else:
         trunc_func = TruncMonth('fecha_movimiento')
         fmt = '%Y-%m'
@@ -577,7 +543,6 @@ def carga_datos(request):
 
 
             def limpiar(txt):
-                # Normalización de nombres de columna (sin acentos, espacios por guión bajo)
                 s = str(txt).strip().lower()
                 s = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode('utf-8')
                 return s.replace(" ", "_")
@@ -623,9 +588,6 @@ def carga_datos(request):
                     defaults={
                         "categoria": cat_obj,
                         "marca": marca_obj,
-                        # IMPORTANTE: Aquí se actualiza stock_actual directamente,
-                        # si hay un signal de post_save en Producto, podría causar un bucle,
-                        # pero por diseño, el signal está en MovimientoInventario, así que está bien.
                         "stock_actual": stock_nuevo,
                         "stock_minimo": stock_minimo,
                         "descripcion": descripcion
@@ -714,12 +676,10 @@ def registrar_factura(request):
     if request.method == "POST":
         datos = json.loads(request.body)
 
-        # Datos del cliente
         cliente_nombre = datos.get("cliente_nombre", "")
         cliente_apellido = datos.get("cliente_apellido", "")
         cliente_rut = datos.get("cliente_rut", "")
 
-        # Crear factura
         factura = Factura.objects.create(
             cliente_nombre=cliente_nombre,
             cliente_apellido=cliente_apellido,
@@ -728,24 +688,17 @@ def registrar_factura(request):
 
         items = datos.get("items", [])
 
-        # Crear detalle + actualizar stock
         for item in items:
             producto = Producto.objects.get(id=item["id"])
             cantidad = int(item["cantidad"])
 
-            # 🛑 ELIMINAMOS la actualización manual del stock:
-            # producto.stock_actual -= cantidad
-            # producto.save()
-           
-            # ✅ REGISTRAR MOVIMIENTO CORRECTAMENTE COMO SALIDA
-            # Este movimiento dispara el Signal para recalcular el stock_actual.
             MovimientoInventario.objects.create(
                 producto=producto,
                 cantidad=cantidad,
-                tipo_movimiento='salida' # <--- CORRECCIÓN CLAVE
+                tipo_movimiento='salida' 
             )
 
-            # Crear el DetalleFactura
+
             DetalleFactura.objects.create(
                 factura=factura,
                 producto=producto,
@@ -763,10 +716,10 @@ def registrar_factura(request):
 @login_required(login_url="index")
 def factura_pdf(request, id):
     factura = Factura.objects.get(id=id)
-    # Selecciona los detalles y precarga la información de Producto, Categoría y Marca
+
     detalles = factura.detalles.select_related('producto__categoria', 'producto__marca')
 
-    # 1) GENERAR PDF EN MEMORIA
+
     html = render_to_string("factura_pdf.html", {
         "factura": factura,
         "detalles": detalles,
@@ -775,14 +728,13 @@ def factura_pdf(request, id):
     buffer_pdf = BytesIO()
     pisa_status = pisa.CreatePDF(html, dest=buffer_pdf)
 
-    # Devolver PDF como respuesta HTTP
+
     response = HttpResponse(buffer_pdf.getvalue(), content_type='application/pdf')
     response["Content-Disposition"] = f'attachment; filename="factura_{factura.id}.pdf"'
     return response
 
 # ============================================================
 # API NUEVA: GRÁFICO COMPARATIVO POR PRODUCTOS ESPECÍFICOS
-# (Se repite aquí para asegurar que la versión final esté completa, aunque aparece dos veces en el código original)
 # ============================================================
 @login_required
 def chart_productos_api(request):
@@ -794,7 +746,7 @@ def chart_productos_api(request):
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
 
-    # 1. Validar IDs
+
     if not ids_str:
         return JsonResponse({"labels": [], "entradas": [], "salidas": []})
 
@@ -803,7 +755,7 @@ def chart_productos_api(request):
     except ValueError:
         return JsonResponse({"labels": [], "entradas": [], "salidas": []})
 
-    # 2. Configurar Fechas
+
     hoy = timezone.now().date()
     if not fecha_inicio:
         fecha_inicio = hoy - timedelta(days=180)
@@ -821,7 +773,7 @@ def chart_productos_api(request):
         except ValueError:
             fecha_fin = hoy
 
-    # 3. CONSULTA AGRUPADA POR PRODUCTO
+
     qs = MovimientoInventario.objects.filter(
         fecha_movimiento__date__range=[fecha_inicio, fecha_fin],
         producto_id__in=id_list
@@ -831,10 +783,10 @@ def chart_productos_api(request):
         total=Sum('cantidad')
     ).order_by('producto__nombre_producto')
 
-    # 4. Procesar Datos
+
     data_map = {}
     
-    # Pre-llenamos el mapa con los productos seleccionados para que aparezcan aunque tengan 0 movimientos
+
     for prod_id in id_list:
        try:
            nombre = Producto.objects.get(id=prod_id).nombre_producto
@@ -852,10 +804,9 @@ def chart_productos_api(request):
         elif row['tipo_movimiento'] == 'salida':
             data_map[nombre]['salidas'] += row['total']
 
-    # Separar en listas para Chart.js
     labels = list(data_map.keys())
     return JsonResponse({
-        "labels": labels, # Nombres de productos
+        "labels": labels, 
         "entradas": [data_map[k]['entradas'] for k in labels],
         "salidas": [data_map[k]['salidas'] for k in labels]
     })

@@ -66,18 +66,17 @@
                     <option value="dia">Diario</option>
                 </select>
             </div>
-            <!-- ✅ Altura fija para el gráfico (referencia) -->
+
             <div class="chart-wrapper" style="height: 350px; position: relative;">
                 <canvas id="movimientosMesChart"></canvas>
             </div>
         </div>
 
 
-        <!-- ✅ AJUSTE: Altura fija de 430px para igualar al vecino y Flex para el scroll interno -->
+
         <div class="chart-container" style="height: 430px; display: flex; flex-direction: column;">
             <h3 style="margin-bottom: 10px; flex-shrink: 0;">⚠️ Detalle de Alertas</h3>
             
-            <!-- La lista ocupa el espacio restante y hace scroll internamente -->
             <ul style="padding-left:20px; list-style:none; overflow-y: auto; flex-grow: 1; margin-bottom: 0;">
                 {% for p in productos_sin_stock %}
                     <li style="color:#e74c3c; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid #eee;">
@@ -215,10 +214,8 @@
 {% endblock content %}
 
 {% block scripts %}
-<!-- Datos pasados de forma segura a JS -->
 {{ lista_productos_simple|json_script:"lista-productos-data" }}
 
-<!-- Se agrega un bloque de script tipo json para chart_data, ya que es un string JSON -->
 <script id="chart-data-raw" type="application/json">
 {{ chart_data_json|safe }}
 </script>
@@ -238,7 +235,6 @@ function cambiarDashboard(vista) {
 /* ===========================================
    2. DATOS ESTÁTICOS DESDE DJANGO
 ===========================================*/
-// Se lee el contenido del script tag en lugar de usar template tags directos en JS
 const data = JSON.parse(document.getElementById('chart-data-raw').textContent);
 
 
@@ -542,13 +538,11 @@ function filtrarListaProductos() {
     });
 }
 
-// 🛑 AQUÍ ESTÁ EL CAMBIO CLAVE:
-// Usamos el modal de Bootstrap en lugar de alert()
+
 function validarYActualizar(checkbox) {
     const seleccionados = document.querySelectorAll(".prod-check:checked");
     
     if (seleccionados.length > MAX_SELECCION) {
-        // MOSTRAR MODAL EN VEZ DE ALERT
         const limitModal = new bootstrap.Modal(document.getElementById('limitModal'));
         limitModal.show();
         

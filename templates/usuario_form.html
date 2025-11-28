@@ -19,7 +19,8 @@
 {% block content %}
   <h2>👥 {{ titulo }}</h2>
 
-  <form method="post" class="form-vertical">
+  <!-- Agregamos ID al formulario para validarlo con JS -->
+  <form method="post" class="form-vertical" id="userForm">
     {% csrf_token %}
     <div class="form-grid">
 
@@ -58,14 +59,7 @@
         {# <div class="field">{{ form.is_superuser }} {{ form.is_superuser.label_tag }}</div> #}
       </div>
 
-      <div class="card">
-        <h3>Grupos</h3>
-        <div class="field">
-          {{ form.groups }}
-          <p style="font-size:.9em;color:#666;margin-top:6px;">
-            Sugeridos: <em>Auditor</em>, <em>Inventario</em>
-          </p>
-        </div>
+      
       </div>
 
     </div>
@@ -84,5 +78,49 @@
     </div>
   </form>
 
+<!-- ========================================== -->
+<!-- MODAL DE VALIDACIÓN DE PERMISOS (POP-UP) -->
+<!-- ========================================== -->
+<div class="modal fade" id="permisosModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title">⚠️ Validación requerida</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="fw-bold">El usuario debe ser ACTIVO o STAFF.</p>
+        <p class="mb-0">Por favor, selecciona al menos una de estas opciones para continuar.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendido</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Script de validación Cliente -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const form = document.getElementById("userForm");
+    
+    // Los IDs de los checkboxes son generados automáticamente por Django como id_nombrecampo
+    const isActiveCheckbox = document.getElementById("id_is_active");
+    const isStaffCheckbox = document.getElementById("id_is_staff");
+    
+    // Inicializar el modal de Bootstrap
+    const permisosModal = new bootstrap.Modal(document.getElementById("permisosModal"));
+
+    if (form && isActiveCheckbox && isStaffCheckbox) {
+        form.addEventListener("submit", function(e) {
+            // Verificar si AMBOS están desmarcados
+            if (!isActiveCheckbox.checked && !isStaffCheckbox.checked) {
+                e.preventDefault(); // Detener el envío del formulario
+                permisosModal.show(); // Mostrar el pop-up
+            }
+        });
+    }
+});
+</script>
 
 {% endblock %}

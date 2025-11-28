@@ -17,6 +17,8 @@
         text-decoration: none;
         font-weight: 600;
         transition: 0.2s ;
+        border: none;
+        cursor: pointer;
     }
     .btn-primary { background: #2C3E50; color: #fff; }
     .btn-edit { background: #3498DB; color: #fff; margin-right: 6px; }
@@ -79,14 +81,73 @@
                 <a href="{% url 'usuario_editar' usuario.id %}" class="btn-edit">✏️ Editar</a>
 
                 {% if not usuario.is_superuser %}
-                <form action="{% url 'usuario_eliminar' usuario.id %}" method="post" style="display:inline;">
-                    {% csrf_token %}
-                    <button class="btn-delete" onclick="return confirm('¿Eliminar usuario {{ usuario.username }}?');">🗑️ Eliminar</button>
-                </form>
+                    <!-- Botón Trigger del Modal -->
+                    <button type="button" 
+                            class="btn-delete" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#deleteUserModal"
+                            data-username="{{ usuario.username }}"
+                            data-url="{% url 'usuario_eliminar' usuario.id %}">
+                        🗑️ Eliminar
+                    </button>
                 {% endif %}
             </td>
         </tr>
     {% endfor %}
     </tbody>
 </table>
+
+<!-- ========================================== -->
+<!-- MODAL DE CONFIRMACIÓN DE ELIMINAR (POP-UP) -->
+<!-- ========================================== -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <!-- Encabezado Oscuro para destacar -->
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title">Confirmar eliminación</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      
+      <div class="modal-body p-4">
+        <p class="mb-0">¿Estás seguro de que deseas eliminar al usuario <strong id="modal-user-name"></strong>?</p>
+        <p class="text-muted small mt-2">Esta acción no se puede deshacer.</p>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        
+        <!-- Formulario que realizará la acción real -->
+        <form id="deleteUserForm" method="post" action="">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Aceptar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Script para pasar datos al modal -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    var deleteUserModal = document.getElementById('deleteUserModal');
+    
+    deleteUserModal.addEventListener('show.bs.modal', function (event) {
+        // Botón que activó el modal
+        var button = event.relatedTarget;
+        
+        // Extraer info de los atributos data-*
+        var username = button.getAttribute('data-username');
+        var url = button.getAttribute('data-url');
+        
+        // Actualizar el contenido del modal
+        var modalUserName = deleteUserModal.querySelector('#modal-user-name');
+        var modalForm = deleteUserModal.querySelector('#deleteUserForm');
+        
+        modalUserName.textContent = username;
+        modalForm.action = url;
+    });
+});
+</script>
+
 {% endblock %}
