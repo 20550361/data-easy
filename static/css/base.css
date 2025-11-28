@@ -195,11 +195,6 @@ body {
     overflow: hidden;               /* Quitamos el scroll general del sidebar */
 }
 
-/* 2. Contenedor superior (Perfil + Menú) con scroll propio si es necesario */
-.sidebar-content-top {
-    overflow-y: auto; 
-    flex-grow: 1; /* Ocupa todo el espacio disponible */
-}
 
 /* 3. Contenedor de Alertas (Fijo abajo) */
 .sidebar-alerts-bottom {
