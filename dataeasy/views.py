@@ -597,8 +597,27 @@ def exportar_excel(request):
 # ===============================   =============================
 @login_required(login_url="index")
 def facturacion(request):
-    productos = Producto.objects.all().order_by("nombre_producto")
-    return render(request, "facturacion.html", {"productos": productos})
+    """
+    Render de la página de facturación.
+    
+    Pasa:
+    - productos: QuerySet de todos los productos
+    - productos_json: JSON con datos completos de cada producto (id, nombre, categoría, marca)
+    """
+    productos = Producto.objects.all().select_related('categoria', 'marca').order_by("nombre_producto")
+    
+    # Crear JSON con datos completos para usar en JavaScript
+    productos_json = json.dumps([{
+        'id': p.id,
+        'nombre': p.nombre_producto,
+        'categoria': p.categoria.nombre_categoria if p.categoria else 'Sin categoría',
+        'marca': p.marca.nombre_marca if p.marca else 'Sin marca'
+    } for p in productos])
+    
+    return render(request, "facturacion.html", {
+        "productos": productos,
+        "productos_json": productos_json
+    })
 
 
 # ============================================================
@@ -705,9 +724,6 @@ def factura_pdf(request, id):
     response["Content-Disposition"] = f'attachment; filename="factura_{factura.id}.pdf"'
     return response
 
-<<<<<<< Updated upstream
-=======
-
 # ============================================================
 # API NUEVA: GRÁFICO COMPARATIVO POR PRODUCTOS ESPECÍFICOS
 # ============================================================
@@ -786,4 +802,4 @@ def chart_productos_api(request):
 
 # ============================================================
 # API NUEVA: VALIDAR RUT CHILENO
->>>>>>> Stashed changes
+

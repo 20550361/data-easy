@@ -103,6 +103,14 @@
 // LISTA INTERNA que almacena los productos a facturar
 let productosFactura = [];
 
+// Cargar datos de productos desde el JSON pasado por Django
+// Este objeto nos permite buscar categoría y marca por ID de producto
+let productosData = JSON.parse('{{ productos_json|safe }}');
+let productosMap = {};
+productosData.forEach(p => {
+    productosMap[p.id] = p;
+});
+
 // ===============================
 // MOSTRAR MODAL DE ERROR
 // ===============================
@@ -124,7 +132,6 @@ function mostrarError(titulo, mensaje) {
 function agregarProducto() {
     const select = document.getElementById("productoSelect");
     const productoId = select.value;
-    const productoNombre = select.selectedOptions[0].text;
     const cantidad = parseInt(document.getElementById("cantidadInput").value);
 
     // VALIDACIÓN: Verificar que se seleccionó producto y cantidad válida
@@ -133,10 +140,20 @@ function agregarProducto() {
         return;
     }
 
+    // Obtener datos del producto desde el mapa (incluye categoría y marca)
+    const producto = productosMap[productoId];
+    if (!producto) {
+        mostrarError("Error", "Producto no encontrado.");
+        return;
+    }
+
     // Agregar al array interno (esto se enviará al backend)
     productosFactura.push({
         id: productoId,
         cantidad: cantidad,
+        nombre: producto.nombre,
+        categoria: producto.categoria,
+        marca: producto.marca
     });
 
     // Agregar fila a la tabla con botón de eliminar
@@ -145,10 +162,10 @@ function agregarProducto() {
     const indice = productosFactura.length - 1; // Índice del producto agregado
 
     fila.innerHTML = `
-        <td>${productoNombre}</td>
+        <td>${producto.nombre}</td>
         <td>${cantidad}</td>
-        <td>N/A</td>
-        <td>N/A</td>
+        <td>${producto.categoria}</td>
+        <td>${producto.marca}</td>
         <td class="text-center">
             <button class="btn btn-sm btn-danger" onclick="eliminarProducto(${indice})">
                 🗑️ Eliminar
@@ -207,11 +224,12 @@ async function guardarFactura() {
     }
 
     // Construir payload con datos de cliente e items
+    // Solo enviamos id y cantidad al backend (no nombre, categoría, marca)
     const payload = {
         cliente_nombre: nombre,
         cliente_apellido: apellido,
         cliente_rut: rut,
-        items: productosFactura,
+        items: productosFactura.map(p => ({ id: p.id, cantidad: p.cantidad }))
     };
 
     // Enviar al backend
