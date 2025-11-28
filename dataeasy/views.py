@@ -26,6 +26,7 @@ from io import BytesIO
 
 from .models import Producto, Categoria, Marca, MovimientoInventario, Factura, DetalleFactura
 from .forms import UserCreateForm, UserUpdateForm
+from .utils.auth import validar_rut
 
 
 # ============================================================
@@ -664,15 +665,50 @@ def exportar_excel(request):
 # ============================================================
 @login_required(login_url="index")
 def facturacion(request):
-    productos = Producto.objects.all().order_by("nombre_producto")
-    return render(request, "facturacion.html", {"productos": productos})
+    """
+    Render de la página de facturación.
+    
+    Pasa:
+    - productos: QuerySet de todos los productos
+    - productos_json: JSON con datos completos de cada producto (id, nombre, categoría, marca)
+    """
+    productos = Producto.objects.all().select_related('categoria', 'marca').order_by("nombre_producto")
+    
+    # Crear JSON con datos completos para usar en JavaScript
+    productos_json = json.dumps([{
+        'id': p.id,
+        'nombre': p.nombre_producto,
+        'categoria': p.categoria.nombre_categoria if p.categoria else 'Sin categoría',
+        'marca': p.marca.nombre_marca if p.marca else 'Sin marca'
+    } for p in productos])
+    
+    return render(request, "facturacion.html", {
+        "productos": productos,
+        "productos_json": productos_json
+    })
 
 
 # ============================================================
 # REGISTRAR FACTURA (AJAX / JSON) - 🛑 CORREGIDA 🛑
 # ============================================================
+# REGISTRAR FACTURA (AJAX / JSON)
+# ============================================================
 @login_required(login_url="index")
 def registrar_factura(request):
+    """
+    Endpoint AJAX para crear una factura y descontar stock.
+    
+    FLUJO:
+    1. Valida RUT del cliente (validar_rut)
+    2. Crea registro de Factura
+    3. Valida que hay SUFICIENTE stock para TODOS los items
+    4. Si hay error de stock → Cancela y devuelve error
+    5. Si hay stock → Crea DetalleFactura y MovimientoInventario (salida)
+    6. Signal automático recalcula stock: stock = entradas - salidas
+    
+    NOTA: El descuento de stock ocurre automáticamente por el signal,
+          no se descuenta manualmente.
+    """
     if request.method == "POST":
         datos = json.loads(request.body)
 
@@ -680,6 +716,11 @@ def registrar_factura(request):
         cliente_apellido = datos.get("cliente_apellido", "")
         cliente_rut = datos.get("cliente_rut", "")
 
+        # VALIDACIÓN 1: Validar RUT chileno
+        if not validar_rut(cliente_rut):
+            return JsonResponse({"status": "error", "message": "RUT inválido. Verifica el formato y el dígito verificador."})
+
+        # PASO 1: Crear factura
         factura = Factura.objects.create(
             cliente_nombre=cliente_nombre,
             cliente_apellido=cliente_apellido,
@@ -688,21 +729,40 @@ def registrar_factura(request):
 
         items = datos.get("items", [])
 
+        # VALIDACIÓN 2: Verificar stock ANTES de procesar
+        # Recorre todos los items y valida que haya cantidad suficiente
+        for item in items:
+            producto = Producto.objects.get(id=item["id"])
+            cantidad = int(item["cantidad"])
+            
+            if producto.stock_actual < cantidad:
+                # Si no hay stock, elimina la factura y devuelve error
+                factura.delete()
+                return JsonResponse({
+                    "status": "error", 
+                    "message": f"Stock insuficiente para '{producto.nombre_producto}'. Disponible: {producto.stock_actual}, Solicitado: {cantidad}"
+                })
+
+        # PASO 2: Crear detalles y movimientos de inventario
         for item in items:
             producto = Producto.objects.get(id=item["id"])
             cantidad = int(item["cantidad"])
 
-            MovimientoInventario.objects.create(
+            # Crear registro de detalle de factura
+            DetalleFactura.objects.create(
+                factura=factura,
                 producto=producto,
                 cantidad=cantidad,
                 tipo_movimiento='salida' 
             )
 
-
-            DetalleFactura.objects.create(
-                factura=factura,
+            # Crear movimiento de SALIDA (esto dispara el signal automáticamente)
+            # El signal recalculará: stock = entradas - salidas
+            MovimientoInventario.objects.create(
                 producto=producto,
-                cantidad=cantidad
+                tipo_movimiento='salida',
+                cantidad=cantidad,
+                fecha_movimiento=timezone.now()
             )
 
         return JsonResponse({"status": "ok", "factura_id": factura.id})
@@ -746,7 +806,6 @@ def chart_productos_api(request):
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
 
-
     if not ids_str:
         return JsonResponse({"labels": [], "entradas": [], "salidas": []})
 
@@ -754,7 +813,6 @@ def chart_productos_api(request):
         id_list = [int(x) for x in ids_str.split(',') if x.strip().isdigit()]
     except ValueError:
         return JsonResponse({"labels": [], "entradas": [], "salidas": []})
-
 
     hoy = timezone.now().date()
     if not fecha_inicio:
@@ -772,7 +830,6 @@ def chart_productos_api(request):
             fecha_fin = datetime.strptime(fecha_fin, "%Y-%m-%d").date()
         except ValueError:
             fecha_fin = hoy
-
 
     qs = MovimientoInventario.objects.filter(
         fecha_movimiento__date__range=[fecha_inicio, fecha_fin],

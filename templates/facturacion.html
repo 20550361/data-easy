@@ -28,7 +28,13 @@
 
         <div class="col-md-4">
             <label>RUT:</label>
-            <input type="text" id="clienteRut" class="form-control">
+            <input 
+                type="text" 
+                id="cliente_rut" 
+                class="form-control"
+                placeholder="Ej: 12345678-9"
+                maxlength="12"
+                oninput="this.value = this.value.replace(/[^0-9kK\-]/g, '')"/>
         </div>
 
     </div>
@@ -75,6 +81,7 @@
                 <th>Cantidad</th>
                 <th>Categoría</th>
                 <th>Marca</th>
+                <th class="text-center">Acciones</th>
             </tr>
         </thead>
 
@@ -93,70 +100,139 @@
 <!-- =============================== -->
 
 <script>
-
-// LISTA INTERNA
+// LISTA INTERNA que almacena los productos a facturar
 let productosFactura = [];
+
+// Cargar datos de productos desde el JSON pasado por Django
+// Este objeto nos permite buscar categoría y marca por ID de producto
+let productosData = JSON.parse('{{ productos_json|safe }}');
+let productosMap = {};
+productosData.forEach(p => {
+    productosMap[p.id] = p;
+});
+
+// ===============================
+// MOSTRAR MODAL DE ERROR
+// ===============================
+// Función para mostrar errores en un modal de Bootstrap
+function mostrarError(titulo, mensaje) {
+    const modal = new bootstrap.Modal(document.getElementById('modalError'), {
+        backdrop: 'static',
+        keyboard: false
+    });
+    document.getElementById('errorTitulo').textContent = titulo;
+    document.getElementById('errorMensaje').textContent = mensaje;
+    modal.show();
+}
 
 // ===============================
 // AGREGAR PRODUCTO A LA LISTA
 // ===============================
+// Agrega un producto a la tabla y al array de productos
 function agregarProducto() {
-
     const select = document.getElementById("productoSelect");
     const productoId = select.value;
-    const productoNombre = select.selectedOptions[0].text;
     const cantidad = parseInt(document.getElementById("cantidadInput").value);
 
+    // VALIDACIÓN: Verificar que se seleccionó producto y cantidad válida
     if (!productoId || cantidad <= 0) {
-        alert("Debes seleccionar un producto y una cantidad válida.");
+        mostrarError("Validación", "Debes seleccionar un producto y una cantidad válida.");
         return;
     }
 
-    // Agregar al array que se enviará al backend
+    // Obtener datos del producto desde el mapa (incluye categoría y marca)
+    const producto = productosMap[productoId];
+    if (!producto) {
+        mostrarError("Error", "Producto no encontrado.");
+        return;
+    }
+
+    // Agregar al array interno (esto se enviará al backend)
     productosFactura.push({
         id: productoId,
         cantidad: cantidad,
+        nombre: producto.nombre,
+        categoria: producto.categoria,
+        marca: producto.marca
     });
 
-    // Agregar a la tabla
+    // Agregar fila a la tabla con botón de eliminar
     const tabla = document.getElementById("tablaProductos");
     const fila = document.createElement("tr");
+    const indice = productosFactura.length - 1; // Índice del producto agregado
 
     fila.innerHTML = `
-        <td>${productoNombre}</td>
+        <td>${producto.nombre}</td>
         <td>${cantidad}</td>
-        <td>N/A</td>
-        <td>N/A</td>
+        <td>${producto.categoria}</td>
+        <td>${producto.marca}</td>
+        <td class="text-center">
+            <button class="btn btn-sm btn-danger" onclick="eliminarProducto(${indice})">
+                🗑️ Eliminar
+            </button>
+        </td>
     `;
 
     tabla.appendChild(fila);
+    
+    // Limpiar campos de entrada para agregar otro producto
+    document.getElementById("productoSelect").value = "";
+    document.getElementById("cantidadInput").value = "";
 }
+
+// ===============================
+// ELIMINAR PRODUCTO DE LA LISTA
+// ===============================
+// Elimina un producto de la tabla y del array
+function eliminarProducto(indice) {
+    // Eliminar del array interno
+    productosFactura.splice(indice, 1);
+    
+    // Eliminar fila de la tabla
+    const tabla = document.getElementById("tablaProductos");
+    const filas = tabla.querySelectorAll("tr");
+    if (filas[indice]) {
+        filas[indice].remove();
+    }
+}
+
 // ===============================
 // ENVIAR FACTURA AL BACKEND
 // ===============================
+// Valida datos del cliente y crea la factura
 async function guardarFactura() {
-
     const nombre = document.getElementById("clienteNombre").value;
     const apellido = document.getElementById("clienteApellido").value;
-    const rut = document.getElementById("clienteRut").value;
+    const rut = document.getElementById("cliente_rut").value;
 
+    // VALIDACIÓN 1: Completar datos del cliente
     if (!nombre || !apellido || !rut) {
-        alert("Debe completar todos los datos del cliente.");
+        mostrarError("Datos incompletos", "Debe completar todos los datos del cliente.");
         return;
     }
 
+    // VALIDACIÓN 2: RUT válido
+    if (!validarRUT(rut)) {
+        mostrarError("RUT Inválido", "El RUT ingresado no es válido. Verifique e intente nuevamente.");
+        return;
+    }
+
+    // VALIDACIÓN 3: Agregar al menos un producto
     if (productosFactura.length === 0) {
-        alert("Debe agregar al menos un producto.");
+        mostrarError("Sin productos", "Debe agregar al menos un producto a la factura.");
         return;
     }
 
+    // Construir payload con datos de cliente e items
+    // Solo enviamos id y cantidad al backend (no nombre, categoría, marca)
     const payload = {
         cliente_nombre: nombre,
         cliente_apellido: apellido,
         cliente_rut: rut,
-        items: productosFactura,
+        items: productosFactura.map(p => ({ id: p.id, cantidad: p.cantidad }))
     };
 
+    // Enviar al backend
     const response = await fetch("/facturacion/registrar/", {
         method: "POST",
         headers: { 
@@ -168,24 +244,76 @@ async function guardarFactura() {
 
     const data = await response.json();
 
+    // Procesar respuesta
     if (data.status === "ok") {
-        alert("Factura registrada correctamente.");
-        window.location.href = `/facturacion/pdf/${data.factura_id}/`;
+        // Éxito: redirigir a generar PDF
+        mostrarError("Éxito", "Factura registrada correctamente. Se generará el PDF...");
+        setTimeout(() => {
+            window.location.href = `/facturacion/pdf/${data.factura_id}/`;
+        }, 1500);
     } else {
-        alert("Error al guardar la factura.");
+        // Error: mostrar mensaje del servidor
+        mostrarError("Error", data.message || "No se pudo guardar la factura.");
     }
 }
-
 
 // ===============================
 // OBTENER TOKEN CSRF
 // ===============================
+// Extrae el token CSRF de las cookies
 function getCSRFToken() {
     return document.cookie.split("; ")
         .find(row => row.startsWith("csrftoken="))
         ?.split("=")[1];
 }
 
+// ===============================
+// VALIDAR RUT CHILENO
+// ===============================
+// Valida formato y dígito verificador del RUT
+function validarRUT(rut) {
+    rut = rut.replace(/\./g, "").replace(/-/g, "");
+
+    if (rut.length < 8) return false;
+
+    let cuerpo = rut.slice(0, -1);
+    let dv = rut.slice(-1).toUpperCase();
+
+    let suma = 0;
+    let multiplo = 2;
+
+    // Calcular dígito verificador
+    for (let i = cuerpo.length - 1; i >= 0; i--) {
+        suma += multiplo * cuerpo[i];
+        multiplo = multiplo === 7 ? 2 : multiplo + 1;
+    }
+
+    let dvEsperado = 11 - (suma % 11);
+    dvEsperado = dvEsperado === 11 ? "0" : dvEsperado === 10 ? "K" : dvEsperado.toString();
+
+    return dv === dvEsperado;
+}
+
 </script>
+
+<!-- =============================== -->
+<!-- MODAL DE ERROR (Bootstrap) -->
+<!-- =============================== -->
+<div class="modal fade" id="modalError" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="errorTitulo">Error</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p id="errorMensaje">Mensaje de error</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 {% endblock %}
