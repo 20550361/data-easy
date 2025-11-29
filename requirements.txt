@@ -1,0 +1,6 @@
+Django>=5.0
+mysqlclient
+python-dotenv
+pandas
+openpyxl
+xhtml2pdf
